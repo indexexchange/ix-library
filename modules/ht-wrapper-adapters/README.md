@@ -1,0 +1,1 @@
+Please check [here](https://github.com/indexexchange/ht-wrapper-adapters) for all 3rd party partner adapters.
