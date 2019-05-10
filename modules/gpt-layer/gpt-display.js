@@ -25,12 +25,12 @@ function GptDisplay(configs, state, executeNext) {
     var __gptDisplay;
     var __gptDisplayQueue;
 
-    function __callGptDisplay(divId) {
+    function __callGptDisplay(divOrSlot) {
         if (__gptDisplay) {
-            return __gptDisplay(divId);
+            return __gptDisplay(divOrSlot);
         }
 
-        return window.googletag.display(divId);
+        return window.googletag.display(divOrSlot);
     }
 
     function __processGptDisplay(session) {
@@ -47,7 +47,7 @@ function GptDisplay(configs, state, executeNext) {
                 if (head.parcels && !Utilities.isEmpty(head.parcels)) {
                     __setTargeting(head.sessionId, head.parcels);
                 }
-                __callGptDisplay(head.divId);
+                __callGptDisplay(head.divOrSlot);
             }
         } else {
             if (session.outParcels && !Utilities.isEmpty(session.outParcels)) {
@@ -57,15 +57,23 @@ function GptDisplay(configs, state, executeNext) {
             if (session.parcels && !Utilities.isEmpty(session.parcels)) {
                 __setTargeting(session.sessionId, session.parcels);
             }
-            __callGptDisplay(session.divId);
+            __callGptDisplay(session.divOrSlot);
         }
     }
 
-    function display(divId) {
+    function display(divOrSlot) {
         //? if (DEBUG) {
         var results = Inspector.validate({
-            type: 'string'
-        }, divId);
+            type: 'object',
+            strict: true,
+            properties: {
+                divOrSlot: {
+                    type: 'any'
+                }
+            }
+        }, {
+            divOrSlot: divOrSlot
+        });
 
         if (!results.valid) {
             throw Whoopsie('INVALID_ARGUMENT', results.format());
@@ -73,7 +81,7 @@ function GptDisplay(configs, state, executeNext) {
         //? }
         var session = {
             done: false,
-            divId: divId,
+            divOrSlot: divOrSlot,
             outParcels: null,
             parcels: null,
             sessionId: ''
@@ -81,6 +89,13 @@ function GptDisplay(configs, state, executeNext) {
 
         if (state.requestArchitecture === Constants.RequestArchitectures.SRA) {
             __gptDisplayQueue.push(session);
+        }
+
+        var divId = null;
+        if (GptHelper.isGSlot(divOrSlot)) {
+            divId = divOrSlot.getSlotElementId();
+        } else {
+            divId = divOrSlot;
         }
 
         var gSlot = GptHelper.getGSlotByDivId(divId);

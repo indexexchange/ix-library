@@ -97,7 +97,8 @@ var ConfigValidators = {
             properties: {
                 timeout: {
                     type: 'integer',
-                    gte: 0
+                    gte: 0,
+                    optional: true
                 },
                 partners: {
                     type: 'object',
@@ -318,7 +319,8 @@ var ConfigValidators = {
             type: 'object',
             properties: {
                 htSlots: {
-                    type: 'object'
+                    type: 'object',
+                    optional: true
                 },
                 Services: {
                     type: 'object',

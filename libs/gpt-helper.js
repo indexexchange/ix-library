@@ -11,6 +11,7 @@ var Scribe = require('scribe.js');
 //? }
 
 function GptHelper() {
+
     function run(fn, gpt) {
         //? if (DEBUG){
         var results = Inspector.validate({

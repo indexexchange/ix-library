@@ -1,7 +1,9 @@
 'use strict';
 
 var DeviceTypeChecker = require('device-type-checker.js');
+//? if (PRODUCT !== 'IdentityLibrary') {
 var HeaderTagSlot = require('header-tag-slot.js');
+//? }
 var SpaceCamp = require('space-camp.js');
 var Utilities = require('utilities.js');
 var Whoopsie = require('whoopsie.js');
@@ -132,6 +134,7 @@ function Loader(configs) {
         //? if (DEBUG) {
         Scribe.info('DeviceTypeChecker loaded.');
         //? }
+        //? if (PRODUCT !== 'IdentityLibrary') {
 
         for (var htSlotName in configs.htSlots) {
             if (!configs.htSlots.hasOwnProperty(htSlotName)) {
@@ -147,6 +150,7 @@ function Loader(configs) {
             Scribe.info('Created htSlot "' + htSlotName + '"');
             //? }
         }
+        //? }
 
         __directInterface = {
             Services: {},

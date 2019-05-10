@@ -765,7 +765,7 @@ function RenderService(configs) {
         __partnerInfo[partnerId].idKey = idKey;
     }
 
-    //? } // End feature check block for GPT_LINE_ITEMS
+    //? }
 
     (function __constructor() {
         __adStorage = {};

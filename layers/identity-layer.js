@@ -33,11 +33,19 @@ function IdentityLayer(configs) {
         COMPLETE: 2
     };
 
+    //? if (PRODUCT !== 'IdentityLibrary') {
+
     var __identityTimeout;
 
-    var __retrievalDefer;
-
     var __identityTimerId;
+    //? }
+
+    //? if (PRODUCT === 'IdentityLibrary') {
+
+    var __getIdentityInfoCalled = false;
+    //? }
+
+    var __retrievalDefer;
 
     function __partnerCaller(partnerId, partnerInstance) {
         __partnerStatuses[partnerId] = __EnumStatuses.IN_PROGRESS;
@@ -83,34 +91,15 @@ function IdentityLayer(configs) {
         }
 
         Prms.all(partnerPromises).then(function () {
+            //? if (PRODUCT === 'IdentityLibrary') {
+            EventsService.emit('rti_partner_request_complete', {
+                requestsCompleted: partnerPromises.length
+            });
+            //? }
             invocationDefer.resolve();
         });
 
         return invocationDefer;
-    }
-
-    function __getAllPartnerResults() {
-        var identityData = {};
-
-        for (var partnerId in __identityPartners) {
-            if (!__identityPartners.hasOwnProperty(partnerId)) {
-                continue;
-            }
-
-            var partner = __identityPartners[partnerId];
-
-            if (partner.enabled) {
-                var partnerIdentityData = partner.instance.getResults();
-
-                if (partnerIdentityData) {
-                    identityData[partnerId] = {
-                        data: partnerIdentityData
-                    };
-                }
-            }
-        }
-
-        return identityData;
     }
 
     function __sendStatsTimeouts() {
@@ -127,6 +116,58 @@ function IdentityLayer(configs) {
         }
     }
 
+    function __getAllPartnerResults() {
+        var identityData = {};
+
+        //? if (PRODUCT === 'IdentityLibrary') {
+        if (!__getIdentityInfoCalled) {
+            __getIdentityInfoCalled = true;
+            __sendStatsTimeouts();
+        }
+        //? }
+
+        for (var partnerId in __identityPartners) {
+            if (!__identityPartners.hasOwnProperty(partnerId)) {
+                continue;
+            }
+
+            var partner = __identityPartners[partnerId];
+
+            if (partner.enabled) {
+                var partnerIdentityData = partner.instance.getResults();
+
+                //? if (PRODUCT !== 'IdentityLibrary') {
+                if (partnerIdentityData) {
+                    identityData[partnerId] = {
+                        data: partnerIdentityData
+                    };
+                }
+                //? } else {
+
+                if (__partnerStatuses[partnerId] === __EnumStatuses.COMPLETE) {
+                    if (partnerIdentityData) {
+                        identityData[partnerId] = {
+                            data: partnerIdentityData
+                        };
+                    } else {
+                        identityData[partnerId] = {
+                            data: {}
+                        };
+                    }
+                    identityData[partnerId].responsePending = false;
+                } else {
+                    identityData[partnerId] = {
+                        data: {},
+                        responsePending: true
+                    };
+                }
+                //? }
+            }
+        }
+
+        return identityData;
+    }
+
     function retrieve() {
         if (__status !== __EnumStatuses.NOT_STARTED) {
             return;
@@ -135,6 +176,8 @@ function IdentityLayer(configs) {
         __retrievalDefer = __invokeAllPartners();
 
         __status = __EnumStatuses.IN_PROGRESS;
+
+        //? if (PRODUCT !== 'IdentityLibrary') {
 
         __retrievalDefer.promise.then(function () {
             __sendStatsTimeouts();
@@ -148,7 +191,10 @@ function IdentityLayer(configs) {
                 __retrievalDefer.resolve();
             });
         }
+        //? }
     }
+
+    //? if (PRODUCT !== 'IdentityLibrary') {
 
     function getResult() {
         if (__status === __EnumStatuses.NOT_STARTED) {
@@ -175,6 +221,7 @@ function IdentityLayer(configs) {
             return __baseClass._executeNext(sessionId, inParcels);
         });
     }
+    //? }
 
     (function __constructor() {
         EventsService = SpaceCamp.services.EventsService;
@@ -192,14 +239,16 @@ function IdentityLayer(configs) {
         }
         //? }
 
-        __identityTimeout = configs.timeout;
         __status = __EnumStatuses.NOT_STARTED;
         __partnerStatuses = {};
         __identityPartners = configs.partners;
+        //? if (PRODUCT !== 'IdentityLibrary') {
+        __identityTimeout = configs.timeout;
 
         EventsService.emit('hs_define_identity_timeout', {
             timeout: __identityTimeout
         });
+        //? }
 
         var allPartnerIds = Object.keys(__identityPartners);
 
@@ -228,12 +277,19 @@ function IdentityLayer(configs) {
             }
         }
 
+        //? if (PRODUCT !== 'IdentityLibrary') {
         __baseClass._setDirectInterface('IdentityLayer', {
             retrieve: retrieve,
             getResult: getResult
         });
 
         __baseClass._setExecutor(__executor);
+        //? } else {
+        __baseClass._setDirectInterface('IdentityLayer', {
+            retrieve: retrieve,
+            getAllPartnerResults: __getAllPartnerResults
+        });
+        //? }
     })();
 
     return Classify.derive(__baseClass, {
@@ -247,10 +303,15 @@ function IdentityLayer(configs) {
         //? }
 
         retrieve: retrieve,
+        //? if (PRODUCT !== 'IdentityLibrary') {
         getResult: getResult,
+        //? }
 
         //? if (TEST) {
+        //? if (PRODUCT !== 'IdentityLibrary') {
         __executor: __executor,
+        //? }
+
         __sendStatsTimeouts: __sendStatsTimeouts,
         __getAllPartnerResults: __getAllPartnerResults,
         __invokeAllPartners: __invokeAllPartners,

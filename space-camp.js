@@ -8,10 +8,11 @@ var SpaceCamp = {
 
     services: {},
 
+    //? if (PRODUCT !== 'IdentityLibrary') {
     htSlots: [],
 
     htSlotsMap: {},
-
+    //? }
     DeviceTypeChecker: {},
 
     initQueue: [],
@@ -20,7 +21,7 @@ var SpaceCamp = {
 
     instanceId: null,
 
-    version: '2.9.8'
+    version: '2.11.0'
 };
 
 module.exports = SpaceCamp;

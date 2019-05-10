@@ -114,6 +114,20 @@ function Utilities() {
         return arr.length ? arr.splice(Math.floor(Math.random() * arr.length), 1)[0] : null;
     }
 
+    function shuffle(a) {
+        var swap;
+        var temp;
+        var i;
+        for (i = a.length - 1; i > 0; i--) {
+            swap = Math.floor(Math.random() * (i + 1));
+            temp = a[i];
+            a[i] = a[swap];
+            a[swap] = temp;
+        }
+
+        return a;
+    }
+
     function deepCopy(entity) {
         //? if (DEBUG) {
         if (typeof entity === 'undefined') {
@@ -424,6 +438,7 @@ function Utilities() {
         //? }
 
         randomSplice: randomSplice,
+        shuffle: shuffle,
         deepCopy: deepCopy,
         mergeObjects: mergeObjects,
         mergeArrays: mergeArrays,

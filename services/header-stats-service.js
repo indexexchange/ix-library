@@ -16,6 +16,7 @@ var Scribe = require('scribe.js');
 //? }
 
 function HeaderStats(config) {
+
     if (!Network.isXhrSupported()) {
         //? if (DEBUG) {
         Scribe.warn('Headerstats requires AJAX support. Aborting instantiation.');
@@ -56,23 +57,29 @@ function HeaderStats(config) {
 
     var __sessionStates;
 
+    //? if (PRODUCT !== 'IdentityLibrary') {
+
     var __partnerTimeouts;
 
     var __requestTimedOut;
+    //? }
 
     //? if (FEATURES.IDENTITY) {
 
     var __identityEvents;
 
+    //? if (PRODUCT !== 'IdentityLibrary') {
+
     var __identityTimeout;
+
+    var __identityPartnerTimeoutSent;
+    //? }
 
     var __identityStartTimes;
 
     var __identityFirstEvent;
 
     var __identityTimedOut;
-
-    var __identityPartnerTimeoutSent;
     //? }
 
     function __getShortEventName(eventName) {
@@ -134,10 +141,12 @@ function HeaderStats(config) {
                 identitySlotObj.xslots[statsId][eventObj.x][abbreviatedName] = eventObj.v;
             }
 
+            //? if (PRODUCT !== 'IdentityLibrary') {
             if (!__identityPartnerTimeoutSent.hasOwnProperty(statsId) || __identityPartnerTimeoutSent[statsId] === false) {
                 identitySlotObj.xslots[statsId].before[__getShortEventName('partner_timeout')] = __identityTimeout;
                 __identityPartnerTimeoutSent[statsId] = true;
             }
+            //? }
         }
 
         __identityEvents = {};
@@ -221,6 +230,7 @@ function HeaderStats(config) {
         __identityEvents[statsId].push(identityEvent);
     }
     //? }
+    //? if (PRODUCT !== 'IdentityLibrary') {
 
     function __transformSlotStats(sessionId, stats) {
         var slotStats = [];
@@ -338,8 +348,10 @@ function HeaderStats(config) {
 
         return slotStats;
     }
+    //? }
 
     function __sendStats(sessionId) {
+
         if (!__sessionStates.hasOwnProperty(sessionId)) {
             //? if (DEBUG){
             Scribe.error('Cannot send stats for sessionId ' + sessionId + ' because it does not exist.');
@@ -376,14 +388,16 @@ function HeaderStats(config) {
                 e: __pageEvents[sessionId]
             }
         };
-
+        //? if (PRODUCT !== 'IdentityLibrary') {
         bodyObject[__getShortEventName('global_timeout')] = String(SpaceCamp.globalTimeout);
-
+        //? }
         if (__options.auctionCycle) {
             bodyObject.ac = __auctionCycleTimes[sessionId];
         }
 
-        //? if (FEATURES.IDENTITY) {
+        //? if (PRODUCT === 'IdentityLibrary') {
+        bodyObject.sl = __transformIdentityStats();
+        //? } else if(FEATURES.IDENTITY) {
         bodyObject.sl = Utilities.mergeArrays(__transformSlotStats(sessionId, __slotStats[sessionId]), __transformIdentityStats());
         //? } else {
         bodyObject.sl = __transformSlotStats(sessionId, __slotStats[sessionId]);
@@ -413,6 +427,7 @@ function HeaderStats(config) {
 
         __sessionStates[sessionId] = SessionStates.SENT;
     }
+    //? if (PRODUCT !== 'IdentityLibrary') {
 
     function __recordPartnerEvent(eventName, data) {
         //? if (DEBUG){
@@ -554,6 +569,7 @@ function HeaderStats(config) {
             }
         }
     }
+    //? }
 
     var __eventHandlers = {
         hs_session_start: function (data) {
@@ -632,6 +648,7 @@ function HeaderStats(config) {
             delete __sessionStartTimes[sessionId];
 
             setTimeout(function () {
+
                 __sessionStates[sessionId] = SessionStates.DONE;
 
                 __sendStats(sessionId);
@@ -681,6 +698,7 @@ function HeaderStats(config) {
             if (data.hasOwnProperty('akamaiPresent')) {
                 __akamaiDebugInfo[sessionId].akamaiPresent = data.akamaiPresent;
             }
+        //? if (PRODUCT !== 'IdentityLibrary') {
         },
         hs_slot_request: function (data) {
             __recordPartnerEvent('bid_requests', data);
@@ -731,6 +749,7 @@ function HeaderStats(config) {
             //? }
 
             __partnerTimeouts[data.statsId] = String(data.timeout);
+        //? }
         //? if (FEATURES.IDENTITY) {
         },
         hs_identity_request: function (data) {
@@ -778,7 +797,9 @@ function HeaderStats(config) {
             }
             //? }
 
+            //? if (PRODUCT !== 'IdentityLibrary') {
             __identityTimeout = String(data.timeout);
+            //? }
 
         //? }
         }
@@ -803,7 +824,7 @@ function HeaderStats(config) {
         __options = config.options;
 
         __instanceId = __siteId + System.now();
-        __instanceId += System.generateUniqueId(32 - __instanceId.length);
+        __instanceId = __instanceId + System.generateUniqueId(32 - __instanceId.length);
 
         SpaceCamp.instanceId = __instanceId;
 
@@ -815,15 +836,19 @@ function HeaderStats(config) {
         __sessionStartTimes = {};
         __auctionCycleTimes = {};
 
+        //? if (PRODUCT !== 'IdentityLibrary') {
         __partnerTimeouts = {};
 
         __requestTimedOut = {};
+        //? }
 
         //? if (FEATURES.IDENTITY) {
         __identityEvents = {};
         __identityStartTimes = {};
         __identityTimedOut = false;
+        //? if (PRODUCT !== 'IdentityLibrary') {
         __identityPartnerTimeoutSent = {};
+        //? }
         //? }
 
         for (var eventName in __eventHandlers) {

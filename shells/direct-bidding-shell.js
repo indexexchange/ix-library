@@ -33,6 +33,8 @@ function DirectBiddingShell() {
         partner_request_complete: 6
     };
 
+    var __RTISupressList;
+
     function setFirstPartyData(data) {
         if (!Utilities.isObject(data)) {
             EventsService.emit('error', 'invalid first-party data: `data` must be an object');
@@ -235,6 +237,24 @@ function DirectBiddingShell() {
             receivedInfo = __directInterface.Layers.DirectBiddingLayer.retrieveDemand(htSlotDemandObjs);
 
             receivedInfo.promise
+                //? if (FEATURES.IDENTITY) {
+                .then(function (receivedDemand) {
+                    return __directInterface.Layers.IdentityLayer.getResult()
+                        .then(function (identityResult) {
+                            //? if (RTI_SUPPRESS_LIST) {
+                            for (var partner in __RTISupressList) {
+                                if (!__RTISupressList.hasOwnProperty(partner)) {
+                                    continue;
+                                }
+                                delete identityResult[__RTISupressList[partner]];
+                            }
+                            //? }
+                            receivedDemand.identity = identityResult;
+
+                            return receivedDemand;
+                        });
+                })
+                //? }
                 .then(function (receivedDemand) {
                     callback(receivedDemand);
                 })
@@ -344,6 +364,14 @@ function DirectBiddingShell() {
                 write('{}');
             }
             write(';');
+            */
+
+            /*?
+            if (RTI_SUPPRESS_LIST) {
+                write('__RTISupressList = ');
+                write(JSON.stringify(RTI_SUPPRESS_LIST, null, 4));
+                write(';');
+            }
             */
 
             //? if (FEATURES.MULTIPLE_CONFIGS) {
@@ -458,6 +486,10 @@ function DirectBiddingShell() {
 
     //? if (DEBUG) {
     shellInterface.__type__ = 'DirectBiddingShell';
+    //? }
+
+    //? if (TEST) {
+    shellInterface.__RTISupressList = __RTISupressList;
     //? }
 
     shellInterface.setFirstPartyData = setFirstPartyData;

@@ -2,6 +2,7 @@
 
 var Classify = require('classify.js');
 var Layer = require('layer.js');
+var Constants = require('constants.js');
 var Prms = require('prms.js');
 var SpaceCamp = require('space-camp.js');
 var Utilities = require('utilities.js');
@@ -36,6 +37,34 @@ function PartnersLayer(configs) {
     var __firstPartyDataPartnerIds = {
         rubicon: ['RubiconHtb', 'RubiconExtHtb']
     };
+
+    function getShuffledPartnerIDs(partners) {
+        var order = [];
+
+        for (var partner in partners) {
+            if (!partners.hasOwnProperty(partner)) {
+                continue;
+            }
+
+            var priority = partners[partner].priority;
+            if (!Utilities.isInteger(priority)) {
+                priority = Constants.DEFAULT_PARTNER_PRIORITY;
+            }
+
+            order[priority] = order[priority] || [];
+            order[priority].push(partner);
+        }
+
+        var flat = [];
+        order.forEach(function (toShufle) {
+            Utilities.shuffle(toShufle);
+            toShufle.forEach(function (partner) {
+                flat.push(partner);
+            });
+        });
+
+        return flat;
+    }
 
     function __partnerCaller(sessionId, partnerId, partnerInstance, inParcels, isPrefetch) {
         if (isPrefetch && partnerInstance.getPrefetchDisabled()) {
@@ -96,14 +125,34 @@ function PartnersLayer(configs) {
             promises: []
         };
 
-        var allPartnerIds = Object.keys(__partners);
+        //? if (DEBUG) {
+        Scribe.debug('__invokeAllPartners()');
+        //? }
 
-        while (allPartnerIds.length) {
-            var partnerId = Utilities.randomSplice(allPartnerIds);
+        var allPartnerIds = getShuffledPartnerIDs(__partners);
+
+        //? if (DEBUG) {
+        Scribe.debug('allPartnerIds ', JSON.stringify(allPartnerIds));
+        //? }
+
+        for (var p = 0; p < allPartnerIds.length; p++) {
+            var partnerId = allPartnerIds[p];
+
+            //? if (DEBUG) {
+            if (!__partners.hasOwnProperty(partnerId)) {
+                Scribe.error('partnerId not found in __partners', partnerId);
+
+                continue;
+            }
+            //? }
+
             var partner = __partners[partnerId];
 
             if (partner.enabled) {
                 try {
+                    //? if (DEBUG) {
+                    Scribe.debug('Invoking Partner "' + partnerId + '"');
+                    //? }
                     var partnerDefers = __partnerCaller(sessionId, partnerId, partner.instance, inParcels, isPrefetch);
                     for (var i = 0; i < partnerDefers.length; i++) {
                         returnObj.defers.push(partnerDefers[i]);
@@ -286,11 +335,30 @@ function PartnersLayer(configs) {
 
         var partnersDirectInterface = {};
 
-        var allPartnerIds = Object.keys(__partners);
+        var allPartnerIds = getShuffledPartnerIDs(__partners);
+        //? if (DEBUG) {
+        Scribe.debug('Shuffled partner IDs "' + JSON.stringify(allPartnerIds) + '"');
+        //? }
 
-        for (var i = allPartnerIds.length - 1; i >= 0; i--) {
-            var partnerId = Utilities.randomSplice(allPartnerIds);
+        for (var i = 0; i < allPartnerIds.length; i++) {
+            var partnerId = allPartnerIds[i];
+
+            //? if (DEBUG) {
+            Scribe.debug('Loading Partner "' + partnerId + '"');
+            //? }
+
+            //? if (DEBUG) {
+            if (!__partners.hasOwnProperty(partnerId)) {
+                Scribe.error('partnerId not found in __partners', partnerId);
+
+                continue;
+            }
+            //? }
+
             var partner = __partners[partnerId];
+            //? if (DEBUG) {
+            Scribe.debug('Partner config object: "' + JSON.stringify(partner) + '"');
+            //? }
 
             if (partner.enabled) {
                 try {

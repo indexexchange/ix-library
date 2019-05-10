@@ -9,6 +9,7 @@ var Constants = {
     SESSION_ID_LENGTH: 8,
     PUBKIT_AD_ID_LENGTH: 16,
     RENDER_SERVICE_EXPIRY_SWEEP_TIMER: 30000,
+    DEFAULT_PARTNER_PRIORITY: 1,
     LineItemTypes: {
         ID_AND_SIZE: 1,
         ID_AND_PRICE: 2,

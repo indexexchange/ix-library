@@ -5,6 +5,7 @@ var CommandQueue = require('command-queue.js');
 var Loader = require('loader.js');
 var SpaceCamp = require('space-camp.js');
 var Utilities = require('utilities.js');
+var GptHelper = require('gpt-helper.js');
 
 var ComplianceService;
 var EventsService;
@@ -35,12 +36,12 @@ function PreGptShell() {
         partner_request_complete: 6
     };
 
-    function __callGptDisplay(divId) {
+    function __callGptDisplay(divOrSlot) {
         if (SpaceCamp.LastLineGoogletag.display) {
-            return SpaceCamp.LastLineGoogletag.display(divId);
+            return SpaceCamp.LastLineGoogletag.display(divOrSlot);
         }
 
-        return window.googletag.display(divId);
+        return window.googletag.display(divOrSlot);
     }
 
     function __callGptRefresh(gSlots, options) {
@@ -75,14 +76,14 @@ function PreGptShell() {
         return window.googletag.pubads().disableInitialLoad();
     }
 
-    function display(divId) {
+    function display(divOrSlot) {
         try {
-            if (!Utilities.isString(divId)) {
-                EventsService.emit('error', 'divId must be a string');
+            if (!Utilities.isString(divOrSlot) && !GptHelper.isGSlot(divOrSlot)) {
+                EventsService.emit('error', 'divOrSlot must be a string or valid gslot object');
 
-                return __callGptDisplay(divId);
+                return __callGptDisplay(divOrSlot);
             }
-            __directInterface.Layers.GptLayer.display(divId).catch(function (ex) {
+            __directInterface.Layers.GptLayer.display(divOrSlot).catch(function (ex) {
                 //? if (DEBUG) {
                 Scribe.error('Error occurred while displaying slot');
                 Scribe.error(ex.stack);
@@ -90,7 +91,7 @@ function PreGptShell() {
 
                 EventsService.emit('error', ex);
 
-                return __callGptDisplay(divId);
+                return __callGptDisplay(divOrSlot);
             });
         } catch (ex) {
             //? if (DEBUG) {
@@ -100,7 +101,7 @@ function PreGptShell() {
 
             EventsService.emit('error', ex);
 
-            return __callGptDisplay(divId);
+            return __callGptDisplay(divOrSlot);
         }
     }
 

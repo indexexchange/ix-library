@@ -14,6 +14,7 @@ var EventsService;
 var RenderService;
 
 //? if (DEBUG) {
+var Scribe = require('scribe.js');
 var ConfigValidators = require('config-validators.js');
 var Inspector = require('schema-inspector.js');
 //? }
@@ -174,6 +175,14 @@ function Partner(profile, configs, requiredResources, fns) {
         }
 
         var request = __generateRequestObj(returnParcels, sessionId);
+
+        if (Utilities.isEmpty(request)) {
+            //? if (DEBUG) {
+            Scribe.info('Request object is empty. Aborting sending bid request.');
+
+            //? }
+            return Prms.resolve([]);
+        }
 
         if (__profile.callbackType === Partner.CallbackTypes.CALLBACK_NAME) {
             adResponseCallbacks[request.callbackId] = __generateAdResponseCallback(request.callbackId);
