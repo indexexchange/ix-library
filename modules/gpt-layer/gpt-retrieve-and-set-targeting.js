@@ -7,6 +7,7 @@ var Whoopsie = require('whoopsie.js');
 var GptMapSlots = require('gpt-map-slots.js');
 var GptClearTargeting = require('gpt-clear-targeting.js');
 var GptSetTargeting = require('gpt-set-targeting.js');
+var HeaderStatsService = require('header-stats-service.js');
 
 var TimerService;
 var EventsService;
@@ -17,6 +18,7 @@ var Scribe = require('scribe.js');
 //? }
 
 function GptRetrieveAndSetTargeting(configs, state, executeNext) {
+
     var __gptMapSlots;
     var __gptClearTargeting;
     var __gptSetTargeting;
@@ -58,7 +60,37 @@ function GptRetrieveAndSetTargeting(configs, state, executeNext) {
             return Prms.resolve();
         }
 
-        var sessionId = TimerService.createTimer(state.globalTimeout, true);
+        var calculatedTimeout = state.desktopGlobalTimeout;
+
+        if (SpaceCamp.DeviceTypeChecker.getDeviceType() === 'mobile') {
+            calculatedTimeout = state.mobileGlobalTimeout;
+        }
+
+        //? if (COMPONENTS.SERVICES.ADAPTIVE_TIMEOUT) {
+
+        //? if (DEBUG) {
+        if (SpaceCamp.services.hasOwnProperty('AdaptiveTimeoutService')) {
+        //? }
+            try {
+                calculatedTimeout = SpaceCamp.services.AdaptiveTimeoutService.getTimeout(calculatedTimeout);
+            } catch (ex) {
+                //? if (DEBUG) {
+                Scribe.error('Error occurred while calculating adaptive timeout.');
+                Scribe.error(ex.stack);
+                //? }
+            }
+        //? if (DEBUG) {
+        }
+        //? }
+        //? }
+
+        //? if (DEBUG) {
+        Scribe.info('Calculated Timeout: ' + calculatedTimeout);
+        //? }
+
+        SpaceCamp.globalTimeout = calculatedTimeout;
+
+        var sessionId = TimerService.createTimer(calculatedTimeout, true);
         TimerService.addTimerCallback(sessionId, function () {
             EventsService.emit('global_timeout_reached', {
                 sessionId: sessionId
@@ -66,7 +98,9 @@ function GptRetrieveAndSetTargeting(configs, state, executeNext) {
         });
 
         EventsService.emit('hs_session_start', {
-            sessionId: sessionId
+            sessionId: sessionId,
+            timeout: calculatedTimeout,
+            sessionType: HeaderStatsService.SessionTypes.DISPLAY
         });
 
         //? if (DEBUG) {

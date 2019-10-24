@@ -15,6 +15,7 @@ var Scribe = require('scribe.js');
 //? }
 
 function MediationLayer(configs) {
+
     var __baseClass;
 
     var __mediationLevel;
@@ -64,6 +65,7 @@ function MediationLayer(configs) {
                         returnParcels.push(currentParcel);
                     }
                 } else {
+
                     if (!htSlotNameToHighestParcel.slot.hasOwnProperty(currentHtSlotName)) {
                         htSlotNameToHighestParcel.slot[currentHtSlotName] = currentParcel;
                     } else {
@@ -73,6 +75,7 @@ function MediationLayer(configs) {
                     }
 
                     if (__mediationLevel === Constants.MediationLevels.PARTNER) {
+
                         htSlotNameToHighestParcel.partner[currentHtSlotName] = htSlotNameToHighestParcel.partner[currentHtSlotName] || {};
                         if (!htSlotNameToHighestParcel.partner[currentHtSlotName].hasOwnProperty(currentParcel.partnerId)) {
                             htSlotNameToHighestParcel.partner[currentHtSlotName][currentParcel.partnerId] = currentParcel;
@@ -142,9 +145,9 @@ function MediationLayer(configs) {
 
             if (__mediationLevel === Constants.MediationLevels.NONE) {
                 return originalParcels;
+            } else {
+                return returnParcels;
             }
-
-            return returnParcels;
         });
     }
 

@@ -11,6 +11,7 @@ var Scribe = require('scribe.js');
 //? }
 
 function DeviceTypeChecker(configs) {
+
     var __activeMethod;
 
     function __getDeviceTypeByUserAgent() {
@@ -18,9 +19,9 @@ function DeviceTypeChecker(configs) {
             return DeviceTypeChecker.DeviceTypes.MOBILE;
         } else if (Device.tablet()) {
             return DeviceTypeChecker.DeviceTypes.DESKTOP;
+        } else {
+            return DeviceTypeChecker.DeviceTypes.DESKTOP;
         }
-
-        return DeviceTypeChecker.DeviceTypes.DESKTOP;
     }
 
     function __getDeviceTypeByReference() {

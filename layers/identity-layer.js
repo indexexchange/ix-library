@@ -5,14 +5,20 @@ var Layer = require('layer.js');
 var Prms = require('prms.js');
 var SpaceCamp = require('space-camp.js');
 var Utilities = require('utilities.js');
+var IdentityPartnerFactory = require('identity-partner-factory');
 
 var IdentityPartnerConstructors = {
     /* PubKitTemplate<IdentityPartnerConstructors> */
 };
 
 //? if (DEBUG) {
+var ConfigValidators = require('config-validators.js');
 var Scribe = require('scribe.js');
 var Whoopsie = require('whoopsie.js');
+
+var IdentityPartnerValidators = {
+    /* PubKitTemplate<IdentityPartnerValidators> */
+};
 //? }
 
 var EventsService;
@@ -47,12 +53,19 @@ function IdentityLayer(configs) {
 
     var __retrievalDefer;
 
-    function __partnerCaller(partnerId, partnerInstance) {
+    function __partnerCaller(partnerId, partner) {
         __partnerStatuses[partnerId] = __EnumStatuses.IN_PROGRESS;
 
         return new Prms(function (resolve) {
-            partnerInstance
+            partner.instance
                 .retrieve()
+                //? if (FEATURES.GPT_IDENTITY_TARGETING) {
+                .then(function () {
+                    if (partner.enableSetTargeting && Utilities.isFunction(partner.instance.getTargets)) {
+                        SpaceCamp.services.GptService.setIdentityTargeting(partner.instance.getTargets());
+                    }
+                })
+                //? }
                 .then(function () {
                     __partnerStatuses[partnerId] = __EnumStatuses.COMPLETE;
                     resolve();
@@ -80,7 +93,7 @@ function IdentityLayer(configs) {
 
             if (partner.enabled) {
                 try {
-                    partnerPromises.push(__partnerCaller(partnerId, partner.instance));
+                    partnerPromises.push(__partnerCaller(partnerId, partner));
                 } catch (ex) {
                     //? if (DEBUG) {
                     Scribe.error('Partner "' + partnerId + '" was unable to retrieve.');
@@ -169,6 +182,7 @@ function IdentityLayer(configs) {
     }
 
     function retrieve() {
+
         if (__status !== __EnumStatuses.NOT_STARTED) {
             return;
         }
@@ -187,6 +201,7 @@ function IdentityLayer(configs) {
         if (__identityTimeout === 0) {
             __retrievalDefer.resolve();
         } else if (!__identityTimerId) {
+
             __identityTimerId = TimerService.createTimer(__identityTimeout, false, function () {
                 __retrievalDefer.resolve();
             });
@@ -197,6 +212,7 @@ function IdentityLayer(configs) {
     //? if (PRODUCT !== 'IdentityLibrary') {
 
     function getResult() {
+
         if (__status === __EnumStatuses.NOT_STARTED) {
             return Prms.resolve(null);
         }
@@ -223,6 +239,44 @@ function IdentityLayer(configs) {
     }
     //? }
 
+    //? if (PRODUCT !== 'IdentityLibrary') {
+
+    function getIdentityResults() {
+        var identityData = {};
+
+        for (var partnerId in __identityPartners) {
+            if (!__identityPartners.hasOwnProperty(partnerId)) {
+                continue;
+            }
+
+            var partner = __identityPartners[partnerId];
+
+            if (partner.enabled) {
+                var partnerIdentityData = partner.instance.getResults();
+                if (__partnerStatuses[partnerId] === __EnumStatuses.COMPLETE) {
+                    if (partnerIdentityData) {
+                        identityData[partnerId] = {
+                            data: partnerIdentityData
+                        };
+                    } else {
+                        identityData[partnerId] = {
+                            data: {}
+                        };
+                    }
+                    identityData[partnerId].responsePending = false;
+                } else {
+                    identityData[partnerId] = {
+                        data: {},
+                        responsePending: true
+                    };
+                }
+            }
+        }
+
+        return identityData;
+    }
+    //? }
+
     (function __constructor() {
         EventsService = SpaceCamp.services.EventsService;
         TimerService = SpaceCamp.services.TimerService;
@@ -230,8 +284,6 @@ function IdentityLayer(configs) {
         __baseClass = Layer();
 
         //? if (DEBUG) {
-        var ConfigValidators = require('config-validators.js');
-
         var results = ConfigValidators.IdentityLayer(configs, Object.keys(IdentityPartnerConstructors));
 
         if (results) {
@@ -258,7 +310,21 @@ function IdentityLayer(configs) {
 
             if (partner.enabled) {
                 try {
-                    partner.instance = IdentityPartnerConstructors[partnerId](partner.configs);
+                    var partnerModule = IdentityPartnerConstructors[partnerId];
+                    if (Utilities.isObject(partnerModule)) {
+                        //? if (DEBUG) {
+                        var partnerValidator = IdentityPartnerValidators[partnerId];
+                        var partnerResults = ConfigValidators.rtiPartnerBaseConfig(partner.configs) || partnerValidator(partner.configs);
+
+                        if (partnerResults) {
+                            throw Whoopsie('INVALID_CONFIG', partnerResults);
+                        }
+                        //? }
+
+                        partner.instance = IdentityPartnerFactory(partnerModule, partner.configs);
+                    } else {
+                        partner.instance = partnerModule(partner.configs);
+                    }
 
                     if (!partner.instance) {
                         partner.enabled = false;
@@ -280,7 +346,8 @@ function IdentityLayer(configs) {
         //? if (PRODUCT !== 'IdentityLibrary') {
         __baseClass._setDirectInterface('IdentityLayer', {
             retrieve: retrieve,
-            getResult: getResult
+            getResult: getResult,
+            getIdentityResults: getIdentityResults
         });
 
         __baseClass._setExecutor(__executor);

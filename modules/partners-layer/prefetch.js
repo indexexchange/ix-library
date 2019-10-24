@@ -7,6 +7,7 @@ var Size = require('size.js');
 var SpaceCamp = require('space-camp.js');
 var System = require('system.js');
 var Utilities = require('utilities.js');
+var HeaderStatsService = require('header-stats-service.js');
 
 var EventsService;
 var TimerService;
@@ -16,6 +17,7 @@ var Scribe = require('scribe.js');
 //? }
 
 function Prefetch(configs, sharedFunctions) {
+
     var PREFETCHED_DEMAND_EXPIRY = 55000;
 
     var __storage;
@@ -34,6 +36,7 @@ function Prefetch(configs, sharedFunctions) {
     var __fixedList;
 
     function __filterHtSlotsByDeviceType(htSlotNames) {
+
         if (!__htSlotMapper) {
             __htSlotMapper = HtSlotMapper({
                 selectors: ['divId'],
@@ -57,6 +60,7 @@ function Prefetch(configs, sharedFunctions) {
     }
 
     function __getHtSlotsByDynamic() {
+
         if (!__dynamicSlotMappingConfigs || !__dynamicSlotMappingStyle) {
             return null;
         }
@@ -163,19 +167,21 @@ function Prefetch(configs, sharedFunctions) {
             return __htSlotMapper.select(filteredHtSlots, validPSlots).map(function (parcel) {
                 return parcel.htSlot.getName();
             });
-        }
-        var htSlotNames = [];
+        } else {
+            var htSlotNames = [];
 
-        for (var k = 0; k < validPSlots.length; k++) {
-            htSlotNames = Utilities.appendToArray(htSlotNames, __htSlotMapper.select(filteredHtSlots, [validPSlots[k]]).map(function (parcel) {
-                return parcel.htSlot.getName();
-            }));
-        }
+            for (var k = 0; k < validPSlots.length; k++) {
+                htSlotNames = Utilities.appendToArray(htSlotNames, __htSlotMapper.select(filteredHtSlots, [validPSlots[k]]).map(function (parcel) {
+                    return parcel.htSlot.getName();
+                }));
+            }
 
-        return htSlotNames;
+            return htSlotNames;
+        }
     }
 
     function __getHtSlotsByPageType() {
+
         if (!__pageTypeMapping) {
             return null;
         }
@@ -204,6 +210,7 @@ function Prefetch(configs, sharedFunctions) {
     }
 
     function __getHtSlotsByFixed() {
+
         if (!__fixedList) {
             return null;
         }
@@ -285,6 +292,7 @@ function Prefetch(configs, sharedFunctions) {
     }
 
     function storeDemand(sessionId, partnerId, partnerInstance, outParcels, wrappedPartnerPromises) {
+
         var droMap = {};
 
         outParcels.map(function (outParcel) {
@@ -296,6 +304,7 @@ function Prefetch(configs, sharedFunctions) {
         });
 
         outParcels.map(function (outParcel) {
+
             if (partnerInstance.getPrefetchDisabled()) {
                 return;
             }
@@ -388,7 +397,9 @@ function Prefetch(configs, sharedFunctions) {
         var sessionId = TimerService.createTimer(SpaceCamp.globalTimeout, false);
 
         EventsService.emit('hs_session_start', {
-            sessionId: sessionId
+            sessionId: sessionId,
+            timeout: SpaceCamp.globalTimeout,
+            sessionType: HeaderStatsService.SessionTypes.DISPLAY
         });
 
         var returnObj = sharedFunctions.__invokeAllPartners(sessionId, outParcels, true);

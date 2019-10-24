@@ -38,11 +38,16 @@ var ConfigValidators = require('config-validators.js');
 //? }
 
 function GptLayer(configs) {
+
     var __baseClass;
 
     var __state;
 
     var __directInterface;
+
+    var __desktopGlobalTimeout;
+
+    var __mobileGlobalTimeout;
 
     (function __constructor() {
         //? if (DEBUG) {
@@ -55,12 +60,20 @@ function GptLayer(configs) {
 
         __baseClass = Layer();
 
+        __desktopGlobalTimeout = configs.desktopGlobalTimeout;
+        __mobileGlobalTimeout = configs.mobileGlobalTimeout;
+
+        if (SpaceCamp.DeviceTypeChecker.getDeviceType() === 'mobile') {
+            SpaceCamp.globalTimeout = __mobileGlobalTimeout;
+        } else {
+            SpaceCamp.globalTimeout = __desktopGlobalTimeout;
+        }
+
         __state = {
             slotDemandHistory: {},
-            globalTimeout: configs.globalTimeout
+            desktopGlobalTimeout: __desktopGlobalTimeout,
+            mobileGlobalTimeout: __mobileGlobalTimeout
         };
-
-        SpaceCamp.globalTimeout = configs.globalTimeout;
 
         __directInterface = {};
 

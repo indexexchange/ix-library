@@ -9,23 +9,24 @@ var Inspector = require('schema-inspector.js');
 //? }
 
 function GptOptions(configs, state) {
+
     var __gptEnableSingleRequest;
     var __gptDisableInitialLoad;
 
     function __callGptEnableSingleRequest() {
         if (__gptEnableSingleRequest) {
             return __gptEnableSingleRequest();
+        } else {
+            return window.googletag.pubads().enableSingleRequest();
         }
-
-        return window.googletag.pubads().enableSingleRequest();
     }
 
     function __callGptDisableInitialLoad() {
         if (__gptDisableInitialLoad) {
             return __gptDisableInitialLoad();
+        } else {
+            return window.googletag.pubads().disableInitialLoad();
         }
-
-        return window.googletag.pubads().disableInitialLoad();
     }
 
     function enableSingleRequest() {

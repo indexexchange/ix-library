@@ -8,6 +8,7 @@ var Scribe = require('scribe.js');
 //? }
 
 function Browser() {
+
     var topWindow;
 
     function getProtocol(httpValue, httpsValue) {
@@ -42,13 +43,15 @@ function Browser() {
     }
 
     function getViewportWidth() {
-        var elementRef = topWindow.document.compatMode === 'CSS1Compat' ? topWindow.document.documentElement : topWindow.document.body;
+
+        var elementRef = 'CSS1Compat' === topWindow.document.compatMode ? topWindow.document.documentElement : topWindow.document.body;
 
         return elementRef.clientWidth;
     }
 
     function getViewportHeight() {
-        var elementRef = topWindow.document.compatMode === 'CSS1Compat' ? topWindow.document.documentElement : topWindow.document.body;
+
+        var elementRef = 'CSS1Compat' === topWindow.document.compatMode ? topWindow.document.documentElement : topWindow.document.body;
 
         return elementRef.clientHeight;
     }
@@ -85,6 +88,7 @@ function Browser() {
         try {
             return window.top === window.self;
         } catch (ex) {
+
             return false;
         }
     }
@@ -94,6 +98,7 @@ function Browser() {
     }
 
     function isLocalStorageSupported() {
+
         try {
             localStorage.setItem('test', 'test');
             localStorage.removeItem('test');
@@ -159,6 +164,7 @@ function Browser() {
                 }
 
                 if (frameElement === null) {
+
                     if (topContextFn) {
                         value = topContextFn(context);
 
@@ -271,10 +277,12 @@ function Browser() {
     function isFlashSupported() {
         var hasFlash = false;
         try {
+
             if (new window.ActiveXObject('ShockwaveFlash.ShockwaveFlash')) {
                 hasFlash = true;
             }
         } catch (ex) {
+
             if (navigator.mimeTypes
                 && navigator.mimeTypes['application/x-shockwave-flash'] !== undefined
                 && navigator.mimeTypes['application/x-shockwave-flash'].enabledPlugin) {

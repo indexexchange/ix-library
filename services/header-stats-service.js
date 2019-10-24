@@ -1,6 +1,8 @@
 'use strict';
 
 var Browser = require('browser.js');
+var Cache = require('cache.js');
+var NormalDistributionTimeoutModule = require('normal-distribution-timeout-module.js');
 var Network = require('network.js');
 var SpaceCamp = require('space-camp.js');
 var System = require('system.js');
@@ -57,11 +59,17 @@ function HeaderStats(config) {
 
     var __sessionStates;
 
+    var __globalTimeouts;
+
+    var __sessionTypes;
+
     //? if (PRODUCT !== 'IdentityLibrary') {
 
     var __partnerTimeouts;
 
     var __requestTimedOut;
+
+    var __userUnknownSessions;
     //? }
 
     //? if (FEATURES.IDENTITY) {
@@ -230,7 +238,77 @@ function HeaderStats(config) {
         __identityEvents[statsId].push(identityEvent);
     }
     //? }
+
     //? if (PRODUCT !== 'IdentityLibrary') {
+
+    function __transformDataStats(sessionId, stats) {
+        if (!__userUnknownSessions.hasOwnProperty(sessionId) || Utilities.isEmpty(stats)) {
+            return [];
+        }
+
+        var eventsWhitelist = [
+            'bid_requests',
+            'bid_responses',
+            'bid_errors',
+            'bid_passes',
+            'bid_timeouts'
+        ];
+
+        var dataSlotObj = {
+            s: 'data',
+            t: System.now(),
+            xslots: {
+                UNKN: {}
+            }
+        };
+
+        for (var htSlotId in stats) {
+            if (!stats.hasOwnProperty(htSlotId)) {
+                continue;
+            }
+
+            var htSlotStats = stats[htSlotId];
+
+            for (var statsId in htSlotStats.events) {
+                if (!htSlotStats.events.hasOwnProperty(statsId)) {
+                    continue;
+                }
+
+                for (var eventName in htSlotStats.events[statsId]) {
+                    if (!htSlotStats.events[statsId].hasOwnProperty(eventName)) {
+                        continue;
+                    }
+
+                    if (eventsWhitelist.indexOf(eventName) === -1) {
+                        continue;
+                    }
+
+                    for (var xSlotName in htSlotStats.events[statsId][eventName]) {
+                        if (!htSlotStats.events[statsId][eventName].hasOwnProperty(xSlotName)) {
+                            continue;
+                        }
+
+                        var xSlotStat = htSlotStats.events[statsId][eventName][xSlotName];
+                        var eventValue = xSlotStat.v;
+                        var abbreviatedName = __getShortEventName(eventName);
+
+                        if (!dataSlotObj.xslots.UNKN.hasOwnProperty(xSlotName)) {
+                            dataSlotObj.xslots.UNKN[xSlotName] = {};
+                            dataSlotObj.xslots.UNKN[xSlotName][__getShortEventName('res_latency')] = __globalTimeouts[sessionId];
+                        }
+
+                        if (!dataSlotObj.xslots.UNKN[xSlotName].hasOwnProperty(abbreviatedName)) {
+                            dataSlotObj.xslots.UNKN[xSlotName][abbreviatedName] = 0;
+                        }
+
+                        dataSlotObj.xslots.UNKN[xSlotName][abbreviatedName] += eventValue;
+                    }
+                }
+            }
+        }
+
+        return [dataSlotObj];
+    }
 
     function __transformSlotStats(sessionId, stats) {
         var slotStats = [];
@@ -241,6 +319,7 @@ function HeaderStats(config) {
             if (!stats.hasOwnProperty(htSlotId)) {
                 continue;
             }
+
             var htSlotStats = stats[htSlotId];
             var slotObj = {
                 s: htSlotStats.s,
@@ -377,7 +456,7 @@ function HeaderStats(config) {
         }
 
         var bodyObject = {
-            p: 'display',
+            p: __sessionTypes[sessionId],
             d: SpaceCamp.DeviceTypeChecker.getDeviceType(),
             c: __configId,
             s: sessionId,
@@ -389,7 +468,7 @@ function HeaderStats(config) {
             }
         };
         //? if (PRODUCT !== 'IdentityLibrary') {
-        bodyObject[__getShortEventName('global_timeout')] = String(SpaceCamp.globalTimeout);
+        bodyObject[__getShortEventName('global_timeout')] = String(__globalTimeouts[sessionId]);
         //? }
         if (__options.auctionCycle) {
             bodyObject.ac = __auctionCycleTimes[sessionId];
@@ -397,10 +476,17 @@ function HeaderStats(config) {
 
         //? if (PRODUCT === 'IdentityLibrary') {
         bodyObject.sl = __transformIdentityStats();
-        //? } else if(FEATURES.IDENTITY) {
-        bodyObject.sl = Utilities.mergeArrays(__transformSlotStats(sessionId, __slotStats[sessionId]), __transformIdentityStats());
+        //? } else if (FEATURES.IDENTITY) {
+        bodyObject.sl = Utilities.mergeArrays(
+            __transformSlotStats(sessionId, __slotStats[sessionId]),
+            __transformDataStats(sessionId, __slotStats[sessionId]),
+            __transformIdentityStats()
+        );
         //? } else {
-        bodyObject.sl = __transformSlotStats(sessionId, __slotStats[sessionId]);
+        bodyObject.sl = Utilities.mergeArrays(
+            __transformSlotStats(sessionId, __slotStats[sessionId]),
+            __transformDataStats(sessionId, __slotStats[sessionId])
+        );
         //? }
 
         bodyObject.akamaiDebugInfo = __akamaiDebugInfo[sessionId];
@@ -408,6 +494,12 @@ function HeaderStats(config) {
         delete __akamaiDebugInfo[sessionId];
         delete __pageEvents[sessionId];
         delete __slotStats[sessionId];
+
+        //? if (PRODUCT !== 'IdentityLibrary') {
+        delete __globalTimeouts[sessionId];
+        delete __userUnknownSessions[sessionId];
+        delete __sessionTypes[sessionId];
+        //? }
 
         var url = Network.buildUrl(__baseUrl, null, {
             s: __siteId,
@@ -576,12 +668,21 @@ function HeaderStats(config) {
             //? if (DEBUG){
             var results = Inspector.validate({
                 type: 'object',
-                strict: true,
                 properties: {
                     sessionId: {
                         type: 'string',
                         minLength: 1
+                    },
+                    //? if (PRODUCT !== 'IdentityLibrary') {
+                    timeout: {
+                        type: 'number',
+                        gt: 0
+                    },
+                    sessionType: {
+                        type: 'string',
+                        minLength: 1
                     }
+                    //? }
                 }
             }, data);
 
@@ -597,6 +698,12 @@ function HeaderStats(config) {
                 __sessionStartTimes[sessionId] = System.now();
                 __pageEvents[sessionId] = [];
                 __slotStats[sessionId] = {};
+                __sessionTypes[sessionId] = HeaderStats.SessionTypes.DISPLAY;
+
+                //? if (PRODUCT !== 'IdentityLibrary') {
+                __sessionTypes[sessionId] = data.sessionType;
+                __globalTimeouts[sessionId] = data.timeout;
+                //? }
             } else {
                 //? if (DEBUG){
                 if (__sessionStates[sessionId] === SessionStates.IPR) {
@@ -606,6 +713,17 @@ function HeaderStats(config) {
                 }
                 //? }
             }
+
+            //? if (PRODUCT !== 'IdentityLibrary') {
+
+            var adaptiveTimeoutData = Cache.getData(NormalDistributionTimeoutModule.STORAGE_KEY_NAME);
+            if (adaptiveTimeoutData === null
+                || !adaptiveTimeoutData.hasOwnProperty('prt')
+                || !Utilities.isArray(adaptiveTimeoutData.prt)
+                || adaptiveTimeoutData.prt.length === 0) {
+                __userUnknownSessions[sessionId] = true;
+            }
+            //? }
         },
         hs_session_end: function (data) {
             //? if (DEBUG){
@@ -817,7 +935,7 @@ function HeaderStats(config) {
         //? }
 
         __pageStartTime = System.now();
-        __baseUrl = Browser.getProtocol('http://as', 'https://as-sec') + '.casalemedia.com/headerstats';
+        __baseUrl = 'https://as-sec.casalemedia.com/headerstats';
 
         __siteId = config.siteId;
         __configId = config.configId;
@@ -835,11 +953,13 @@ function HeaderStats(config) {
         __requestStartTimes = {};
         __sessionStartTimes = {};
         __auctionCycleTimes = {};
+        __sessionTypes = {};
 
         //? if (PRODUCT !== 'IdentityLibrary') {
+        __globalTimeouts = {};
         __partnerTimeouts = {};
-
         __requestTimedOut = {};
+        __userUnknownSessions = {};
         //? }
 
         //? if (FEATURES.IDENTITY) {
@@ -881,5 +1001,10 @@ function HeaderStats(config) {
 
     };
 }
+
+HeaderStats.SessionTypes = {
+    DISPLAY: 'display',
+    VIDEO: 'video'
+};
 
 module.exports = HeaderStats;

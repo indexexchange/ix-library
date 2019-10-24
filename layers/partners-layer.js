@@ -24,6 +24,7 @@ var Scribe = require('scribe.js');
 var TimerService;
 
 function PartnersLayer(configs) {
+
     var __baseClass;
 
     //? if (FEATURES.PREFETCH) {
@@ -301,6 +302,7 @@ function PartnersLayer(configs) {
     }
 
     function __executor(sessionId, inParcels) {
+
         var returnObj = __invokeAllPartners(sessionId, inParcels);
 
         TimerService.addTimerCallback(sessionId, function () {
@@ -361,7 +363,13 @@ function PartnersLayer(configs) {
             //? }
 
             if (partner.enabled) {
+                partner.configs.bidTransformerTypes = {};
                 try {
+                    if (configs.hasOwnProperty('bidTransformerTypes')) {
+                        partner.configs.bidTransformerTypes
+                            = Utilities.deepCopy(configs.bidTransformerTypes);
+                    }
+
                     partner.instance = PartnerConstructors[partnerId](partner.configs, partnerId);
 
                     if (!partner.instance) {

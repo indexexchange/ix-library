@@ -10,6 +10,7 @@ var SpaceCamp = require('space-camp.js');
 var System = require('system.js');
 var Utilities = require('utilities.js');
 var Whoopsie = require('whoopsie.js');
+var HeaderStatsService = require('header-stats-service.js');
 
 var EventsService;
 var TimerService;
@@ -27,10 +28,12 @@ function PostGptLayer(configs) {
 
     var __htSlotMapper;
 
-    var __globalTimeout;
+    var __desktopGlobalTimeout;
+
+    var __mobileGlobalTimeout;
 
     function __displayFallbackAd(gSlot) {
-        //? if (DEBUG){
+        //? if (DEBUG) {
         var results = Inspector.validate({
             type: 'object',
             strict: true,
@@ -57,6 +60,7 @@ function PostGptLayer(configs) {
 
         var gpt = GptHelper.loadGpt();
         gpt.cmd.push(function () {
+
             window.parent.googletag
                 .pubads()
                 .getTargetingKeys()
@@ -90,7 +94,7 @@ function PostGptLayer(configs) {
 
     function display(gSlot, iFrame, gIFrame) {
         return Prms.resolve().then(function () {
-            //? if (DEBUG){
+            //? if (DEBUG) {
             var results = Inspector.validate({
                 type: 'object',
                 strict: true,
@@ -112,7 +116,37 @@ function PostGptLayer(configs) {
             }
             //? }
 
-            var sessionId = TimerService.createTimer(__globalTimeout, true);
+            var calculatedTimeout = __desktopGlobalTimeout;
+
+            if (SpaceCamp.DeviceTypeChecker.getDeviceType() === 'mobile') {
+                calculatedTimeout = __mobileGlobalTimeout;
+            }
+
+            //? if (COMPONENTS.SERVICES.ADAPTIVE_TIMEOUT) {
+
+            //? if (DEBUG) {
+            if (SpaceCamp.services.hasOwnProperty('AdaptiveTimeoutService')) {
+            //? }
+                try {
+                    calculatedTimeout = SpaceCamp.services.AdaptiveTimeoutService.getTimeout(calculatedTimeout);
+                } catch (ex) {
+                    //? if (DEBUG) {
+                    Scribe.error('Error occurred while calculating adaptive timeout.');
+                    Scribe.error(ex.stack);
+                    //? }
+                }
+            //? if (DEBUG) {
+            }
+            //? }
+            //? }
+
+            //? if (DEBUG) {
+            Scribe.info('Calculated Timeout: ' + calculatedTimeout);
+            //? }
+
+            SpaceCamp.globalTimeout = calculatedTimeout;
+
+            var sessionId = TimerService.createTimer(calculatedTimeout, true);
             TimerService.addTimerCallback(sessionId, function () {
                 EventsService.emit('global_timeout_reached', {
                     sessionId: sessionId
@@ -168,7 +202,9 @@ function PostGptLayer(configs) {
             }
 
             EventsService.emit('hs_session_start', {
-                sessionId: sessionId
+                sessionId: sessionId,
+                timeout: calculatedTimeout,
+                sessionType: HeaderStatsService.SessionTypes.DISPLAY
             });
 
             return baseClass._executeNext(sessionId, selectedSlotParcels).then(function (returnParcels) {
@@ -239,9 +275,15 @@ function PostGptLayer(configs) {
         //? }
 
         __lineItemDisablerTargeting = configs.lineItemDisablerTargeting;
-        __globalTimeout = configs.globalTimeout;
 
-        SpaceCamp.globalTimeout = __globalTimeout;
+        __desktopGlobalTimeout = configs.desktopGlobalTimeout;
+        __mobileGlobalTimeout = configs.mobileGlobalTimeout;
+
+        if (SpaceCamp.DeviceTypeChecker.getDeviceType() === 'mobile') {
+            SpaceCamp.globalTimeout = __mobileGlobalTimeout;
+        } else {
+            SpaceCamp.globalTimeout = __desktopGlobalTimeout;
+        }
 
         __htSlotMapper = HtSlotMapper(configs.slotMapping);
 

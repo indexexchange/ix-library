@@ -22,6 +22,18 @@ var ServiceConstructors = [
     },
     //? }
 
+    //? if (COMPONENTS.SERVICES.GPT) {
+    {
+        name: 'GptService',
+        constructor: require('gpt-service.js')
+    },
+    //? } else {
+    {
+        name: 'GptService',
+        constructor: require('gpt-service.stub.js')
+    },
+    //? }
+
     //? if (COMPONENTS.SERVICES.HEADER_STATS) {
     {
         name: 'HeaderStatsService',
@@ -52,6 +64,20 @@ var ServiceConstructors = [
     {
         name: 'RenderService',
         constructor: require('render-service.js')
+    },
+    //? }
+
+    //? if (COMPONENTS.SERVICES.ADAPTIVE_TIMEOUT) {
+    {
+        name: 'AdaptiveTimeoutService',
+        constructor: require('adaptive-timeout-service.js')
+    },
+    //? }
+
+    //? if (COMPONENTS.SERVICES.KEY_VALUE) {
+    {
+        name: 'KeyValueService',
+        constructor: require('key-value-service.js')
     }
     //? }
 ];
@@ -88,6 +114,7 @@ var Scribe = require('scribe.js');
 //? }
 
 function Loader(configs) {
+
     var __directInterface;
 
     //? if (DEBUG) {
@@ -159,6 +186,13 @@ function Loader(configs) {
 
         for (var j = 0; j < ServiceConstructors.length; j++) {
             var serviceId = ServiceConstructors[j].name;
+
+            //? if (TEST) {
+
+            if (!configs.Services.hasOwnProperty(serviceId) && serviceId !== 'ComplianceService') {
+                continue;
+            }
+            //? }
 
             var service = ServiceConstructors[j].constructor(configs.Services[serviceId]);
 

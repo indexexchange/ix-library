@@ -10,6 +10,7 @@ var Scribe = require('scribe.js');
 //? }
 
 function TimerService() {
+
     var TimerStates = {
         NEW: 0,
         RUNNABLE: 1,
@@ -70,7 +71,7 @@ function TimerService() {
 
         var id = System.generateUniqueId(Constants.SESSION_ID_LENGTH);
 
-        startNow = Boolean(startNow);
+        startNow = startNow ? true : false;
         fn = fn ? [fn] : [];
 
         __timerStorage[id] = {

@@ -19,6 +19,7 @@ var Scribe = require('scribe.js');
 //? }
 
 function PreGptShell() {
+
     var __configs;
 
     var __directInterface;
@@ -168,6 +169,7 @@ function PreGptShell() {
             isDestroyed = isDestroyed || __callGptDestroySlots(gSlots);
 
             if (Utilities.isFunction(callback)) {
+
                 try {
                     callback(isDestroyed);
 
@@ -374,10 +376,27 @@ function PreGptShell() {
         }
     }
 
+    function getIdentityInfo() {
+        var identityInfo = {};
+        //? if (FEATURES.IDENTITY) {
+
+        //? if (DEBUG) {
+        if (__directInterface.Layers.hasOwnProperty('IdentityLayer')) {
+        //? }
+            identityInfo = __directInterface.Layers.IdentityLayer.getIdentityResults();
+        //? if (DEBUG) {
+        }
+        //? }
+        //? }
+
+        return identityInfo;
+    }
+
     (function __constructor() {
         SpaceCamp.LastLineGoogletag = {};
 
         try {
+
             /*?
             write('__configs = ');
             if(__CONFIG_WINDOW_GLOBAL__) {
@@ -421,7 +440,9 @@ function PreGptShell() {
 
             var override = __configs.Layers[0].configs.override;
             if (override) {
+
                 var makeLastLine = function () {
+
                     if (override.display) {
                         SpaceCamp.LastLineGoogletag.display = window.googletag.display;
                         window.googletag.display = ComplianceService.delay(display);
@@ -457,6 +478,7 @@ function PreGptShell() {
                 if (Utilities.isArray(window.googletag.cmd)) {
                     window.googletag.cmd.unshift(runInitQueue);
                 } else {
+
                     window.googletag.cmd.push(runInitQueue);
                 }
             }
@@ -570,6 +592,9 @@ function PreGptShell() {
     shellInterface.subscribeEvent = subscribeEvent;
     shellInterface.unsubscribeEvent = unsubscribeEvent;
     shellInterface.apiReady = true;
+    shellInterface.setSiteKeyValueData = SpaceCamp.services.KeyValueService.setSiteKeyValueData;
+    shellInterface.setUserKeyValueData = SpaceCamp.services.KeyValueService.setUserKeyValueData;
+    shellInterface.getIdentityInfo = getIdentityInfo;
 
     /* PubKitTemplate<PartnerExports> */
 

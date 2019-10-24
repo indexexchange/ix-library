@@ -18,6 +18,7 @@ var Scribe = require('scribe.js');
 //? }
 
 function CassandraShell() {
+
     var __configs;
 
     var __directInterface;
@@ -234,7 +235,7 @@ function CassandraShell() {
                     callback();
                 })
                 .catch(function (ex) {
-                //? if (DEBUG) {
+                    //? if (DEBUG) {
                     Scribe.error('Error occurred while retrieving demand');
                     Scribe.error(ex.stack);
                     //? }
@@ -321,8 +322,25 @@ function CassandraShell() {
         }
     }
 
+    function getIdentityInfo() {
+        var identityInfo = {};
+        //? if (FEATURES.IDENTITY) {
+
+        //? if (DEBUG) {
+        if (__directInterface.Layers.hasOwnProperty('IdentityLayer')) {
+        //? }
+            identityInfo = __directInterface.Layers.IdentityLayer.getIdentityResults();
+        //? if (DEBUG) {
+        }
+        //? }
+        //? }
+
+        return identityInfo;
+    }
+
     (function __constructor() {
         try {
+
             /*?
             write('__configs = ');
             if(__CONFIG_WINDOW_GLOBAL__) {
@@ -454,6 +472,9 @@ function CassandraShell() {
     shellInterface.retrieveAndSetDemand = ComplianceService.delay(retrieveAndSetDemand);
     shellInterface.subscribeEvent = subscribeEvent;
     shellInterface.unsubscribeEvent = unsubscribeEvent;
+    shellInterface.setSiteKeyValueData = SpaceCamp.services.KeyValueService.setSiteKeyValueData;
+    shellInterface.setUserKeyValueData = SpaceCamp.services.KeyValueService.setUserKeyValueData;
+    shellInterface.getIdentityInfo = getIdentityInfo;
 
     /* PubKitTemplate<PartnerExports> */
 

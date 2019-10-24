@@ -19,6 +19,7 @@ var Scribe = require('scribe.js');
 //? }
 
 function PostGptShell() {
+
     var __configs;
 
     var __lineItemDisablerTargeting;
@@ -58,6 +59,7 @@ function PostGptShell() {
 
             var gpt = GptHelper.loadGpt();
             gpt.cmd.push(function () {
+
                 window.parent.googletag
                     .pubads()
                     .getTargetingKeys()
@@ -131,6 +133,7 @@ function PostGptShell() {
 
     (function __constructor() {
         try {
+
             /*?
             write('__configs = ');
             if(__CONFIG_WINDOW_GLOBAL__) {
@@ -218,6 +221,8 @@ function PostGptShell() {
     //? }
 
     shellInterface.display = ComplianceService.delay(display);
+    shellInterface.setSiteKeyValueData = SpaceCamp.services.KeyValueService.setSiteKeyValueData;
+    shellInterface.setUserKeyValueData = SpaceCamp.services.KeyValueService.setUserKeyValueData;
 
     /* PubKitTemplate<PartnerExports> */
 

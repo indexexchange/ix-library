@@ -9,6 +9,7 @@ var Utilities = require('utilities.js');
 var GptMapSlots = require('gpt-map-slots.js');
 var GptClearTargeting = require('gpt-clear-targeting.js');
 var GptSetTargeting = require('gpt-set-targeting.js');
+var HeaderStatsService = require('header-stats-service.js');
 
 var TimerService;
 var EventsService;
@@ -19,6 +20,7 @@ var Scribe = require('scribe.js');
 //? }
 
 function GptDisplay(configs, state, executeNext) {
+
     var __mapSlots;
     var __clearTargeting;
     var __setTargeting;
@@ -28,9 +30,9 @@ function GptDisplay(configs, state, executeNext) {
     function __callGptDisplay(divOrSlot) {
         if (__gptDisplay) {
             return __gptDisplay(divOrSlot);
+        } else {
+            return window.googletag.display(divOrSlot);
         }
-
-        return window.googletag.display(divOrSlot);
     }
 
     function __processGptDisplay(session) {
@@ -88,6 +90,7 @@ function GptDisplay(configs, state, executeNext) {
         };
 
         if (state.requestArchitecture === Constants.RequestArchitectures.SRA) {
+
             __gptDisplayQueue.push(session);
         }
 
@@ -109,8 +112,10 @@ function GptDisplay(configs, state, executeNext) {
 
         var gSlots = [];
         if (state.requestArchitecture === Constants.RequestArchitectures.SRA) {
+
             gSlots = GptHelper.getGSlots();
         } else {
+
             gSlots = gSlot ? [gSlot] : [];
         }
 
@@ -121,6 +126,7 @@ function GptDisplay(configs, state, executeNext) {
         }
 
         if (!gSlots.length) {
+
             session.done = true;
             __processGptDisplay(session);
 
@@ -152,7 +158,37 @@ function GptDisplay(configs, state, executeNext) {
             return Prms.resolve();
         }
 
-        var sessionId = TimerService.createTimer(state.globalTimeout, true);
+        var calculatedTimeout = state.desktopGlobalTimeout;
+
+        if (SpaceCamp.DeviceTypeChecker.getDeviceType() === 'mobile') {
+            calculatedTimeout = state.mobileGlobalTimeout;
+        }
+
+        //? if (COMPONENTS.SERVICES.ADAPTIVE_TIMEOUT) {
+
+        //? if (DEBUG) {
+        if (SpaceCamp.services.hasOwnProperty('AdaptiveTimeoutService')) {
+        //? }
+            try {
+                calculatedTimeout = SpaceCamp.services.AdaptiveTimeoutService.getTimeout(calculatedTimeout);
+            } catch (ex) {
+                //? if (DEBUG) {
+                Scribe.error('Error occurred while calculating adaptive timeout.');
+                Scribe.error(ex.stack);
+                //? }
+            }
+        //? if (DEBUG) {
+        }
+        //? }
+        //? }
+
+        //? if (DEBUG) {
+        Scribe.info('Calculated Timeout: ' + calculatedTimeout);
+        //? }
+
+        SpaceCamp.globalTimeout = calculatedTimeout;
+
+        var sessionId = TimerService.createTimer(calculatedTimeout, true);
         TimerService.addTimerCallback(sessionId, function () {
             EventsService.emit('global_timeout_reached', {
                 sessionId: sessionId
@@ -162,7 +198,9 @@ function GptDisplay(configs, state, executeNext) {
         session.sessionId = sessionId;
 
         EventsService.emit('hs_session_start', {
-            sessionId: sessionId
+            sessionId: sessionId,
+            timeout: calculatedTimeout,
+            sessionType: HeaderStatsService.SessionTypes.DISPLAY
         });
 
         //? if (DEBUG) {
@@ -247,6 +285,7 @@ function GptDisplay(configs, state, executeNext) {
 
         var overrideGoogletag = function () {
             if (configs.override && configs.override.display) {
+
                 __gptDisplay = SpaceCamp.LastLineGoogletag.display;
             }
         };

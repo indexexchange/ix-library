@@ -10,6 +10,7 @@ var Scribe = require('scribe.js');
 //? }
 
 function BidTransformer(configs) {
+
     var __defaultSettings = {
         floor: 0,
         buckets: [
@@ -68,7 +69,7 @@ function BidTransformer(configs) {
         }
 
         if (transformed.length > 9) {
-            decimalShift -= transformed.length - 9;
+            decimalShift -= (transformed.length - 9);
             transformed = transformed.slice(0, 9);
         }
 
@@ -81,7 +82,7 @@ function BidTransformer(configs) {
         if (transformed < (configs.floor * shiftMultiplier)) {
             transformed = 0;
         } else if (transformed >= (configs.buckets[len - 1].max * shiftMultiplier)) {
-            transformed = configs.buckets[len - 1].max * shiftMultiplier;
+            transformed = (configs.buckets[len - 1].max * shiftMultiplier);
         } else {
             var min = configs.floor;
 
@@ -98,11 +99,11 @@ function BidTransformer(configs) {
             }
 
             if (configs.roundingType !== BidTransformer.RoundingTypes.NONE) {
-                transformed -= min * shiftMultiplier;
-                transformed /= bucket.step * shiftMultiplier;
+                transformed = transformed - (min * shiftMultiplier);
+                transformed = transformed / (bucket.step * shiftMultiplier);
                 transformed = __round(transformed);
-                transformed *= bucket.step * shiftMultiplier;
-                transformed += min * shiftMultiplier;
+                transformed = transformed * (bucket.step * shiftMultiplier);
+                transformed = transformed + (min * shiftMultiplier);
             }
         }
 
@@ -169,7 +170,7 @@ function BidTransformer(configs) {
         __type__: 'BidTransformer',
         //? }
 
-        apply: apply
+        'apply': apply
     };
 }
 

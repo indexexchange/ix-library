@@ -9,14 +9,15 @@ var Inspector = require('schema-inspector.js');
 //? }
 
 function GptDestroySlots(configs, state) {
+
     var __gptDestroySlots;
 
     function __callGptDestroySlots(gSlots) {
         if (__gptDestroySlots) {
             return __gptDestroySlots(gSlots);
+        } else {
+            return window.googletag.destroySlots(gSlots);
         }
-
-        return window.googletag.destroySlots(gSlots);
     }
 
     function destroySlots(gSlots) {
@@ -60,6 +61,7 @@ function GptDestroySlots(configs, state) {
 
         var overrideGoogletag = function () {
             if (configs.override && configs.override.destroySlots) {
+
                 __gptDestroySlots = SpaceCamp.LastLineGoogletag.destroySlots;
             }
         };

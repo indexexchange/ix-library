@@ -25,7 +25,11 @@ var ConfigValidators = {
                         }
                     }
                 },
-                globalTimeout: {
+                desktopGlobalTimeout: {
+                    type: 'integer',
+                    gte: 0
+                },
+                mobileGlobalTimeout: {
                     type: 'integer',
                     gte: 0
                 },
@@ -45,7 +49,11 @@ var ConfigValidators = {
         var results = Inspector.validate({
             type: 'object',
             properties: {
-                globalTimeout: {
+                desktopGlobalTimeout: {
+                    type: 'integer',
+                    gte: 0
+                },
+                mobileGlobalTimeout: {
                     type: 'integer',
                     gte: 0
                 },
@@ -111,6 +119,10 @@ var ConfigValidators = {
                                 },
                                 enabled: {
                                     type: 'boolean'
+                                },
+                                enableSetTargeting: {
+                                    type: 'boolean',
+                                    optional: true
                                 }
                             }
                         }
@@ -237,6 +249,25 @@ var ConfigValidators = {
                         }
                     }
                 },
+                bidTransformerTypes: {
+                    type: 'object',
+                    optional: true,
+                    properties: {
+                        '*': {
+                            type: 'object',
+                            exec: function (schema, config) {
+                                if (!config) {
+                                    return;
+                                }
+
+                                var result = ConfigValidators.bidTransformerConfig(config);
+                                if (result !== null) {
+                                    this.report(result);
+                                }
+                            }
+                        }
+                    }
+                },
                 partners: {
                     type: 'object',
                     properties: {
@@ -277,7 +308,19 @@ var ConfigValidators = {
             type: 'object',
             strict: true,
             properties: {
-                globalTimeout: {
+                desktopGlobalTimeout: {
+                    type: 'integer',
+                    gte: 0
+                },
+                mobileGlobalTimeout: {
+                    type: 'integer',
+                    gte: 0
+                },
+                desktopVideoGlobalTimeout: {
+                    type: 'integer',
+                    gte: 0
+                },
+                mobileVideoGlobalTimeout: {
                     type: 'integer',
                     gte: 0
                 }
@@ -427,6 +470,11 @@ var ConfigValidators = {
                     type: 'string',
                     eq: ['atf', 'btf'],
                     optional: true
+                },
+                type: {
+                    type: 'string',
+                    eq: ['INSTREAM_VIDEO', 'BANNER'],
+                    optional: true
                 }
             }
         }, configs);
@@ -446,24 +494,25 @@ var ConfigValidators = {
 
         if (!configs.hasOwnProperty('sizeMapping')) {
             return '`config` must have property "sizeMapping"';
-        }
-        var indexRegex = /^(\d+)x(\d+)$/;
-        var keysCount = 0;
+        } else {
+            var indexRegex = /^(\d+)x(\d+)$/;
+            var keysCount = 0;
 
-        for (var index in configs.sizeMapping) {
-            if (!configs.sizeMapping.hasOwnProperty(index)) {
-                continue;
+            for (var index in configs.sizeMapping) {
+                if (!configs.sizeMapping.hasOwnProperty(index)) {
+                    continue;
+                }
+
+                if (indexRegex.test(index) === false) {
+                    return 'Keys of `config.sizeMapping` must be of form `widthxheight`';
+                }
+
+                keysCount++;
             }
 
-            if (indexRegex.test(index) === false) {
-                return 'Keys of `config.sizeMapping` must be of form `widthxheight`';
+            if (keysCount === 0) {
+                return '`config.sizeMapping` must not be empty';
             }
-
-            keysCount++;
-        }
-
-        if (keysCount === 0) {
-            return '`config.sizeMapping` must not be empty';
         }
 
         return null;
@@ -563,6 +612,11 @@ var ConfigValidators = {
                                     minLength: 1
                                 },
                                 pmid: {
+                                    optional: true,
+                                    type: 'string',
+                                    minLength: 1
+                                },
+                                bidderKey: {
                                     optional: true,
                                     type: 'string',
                                     minLength: 1
@@ -675,6 +729,102 @@ var ConfigValidators = {
 
         return null;
     },
+    IdentityPartnerProfile: function (profile) {
+        var results = Inspector.validate({
+            type: 'object',
+            strict: true,
+            properties: {
+                partnerId: {
+                    type: 'string',
+                    minLength: 1
+                },
+                statsId: {
+                    type: 'string',
+                    minLength: 1
+                },
+                version: {
+                    type: 'string',
+                    pattern: /^\d+\.\d+\.\d+$/
+                },
+                source: {
+                    type: 'string',
+                    minLength: 1
+                },
+                cacheExpiry: {
+                    type: 'object',
+                    strict: true,
+                    properties: {
+                        match: {
+                            type: 'integer',
+                            gt: 0
+                        },
+                        pass: {
+                            type: 'integer',
+                            gt: 0
+                        },
+                        error: {
+                            type: 'integer',
+                            gt: 0
+                        }
+                    }
+                },
+                targetingKeys: {
+                    type: 'object',
+                    strict: true,
+                    properties: {
+                        exchangeBidding: {
+                            type: 'string',
+                            minLength: 1
+                        }
+                    }
+                }
+            }
+        }, profile);
+
+        if (!results.valid) {
+            return results.format();
+        }
+
+        return null;
+    },
+    IdentityPartnerModule: function (instance) {
+        var results = Inspector.validate({
+            type: 'object',
+            strict: true,
+            properties: {
+                type: {
+                    type: 'string',
+                    eq: 'identity'
+                },
+                api: {
+                    type: 'string',
+                    minLength: 1
+                },
+                main: {
+                    exec: function (scheme, post) {
+                        if (typeof post !== 'function') {
+                            this.report('must be a function');
+                        }
+                    }
+                },
+                profile: {
+                    type: 'object',
+                    exec: function (scheme, post) {
+                        var err = ConfigValidators.IdentityPartnerProfile(post);
+                        if (err) {
+                            this.report(err);
+                        }
+                    }
+                }
+            }
+        }, instance);
+
+        if (!results.valid) {
+            return results.format();
+        }
+
+        return null;
+    },
     partnerBaseConfig: function (configs) {
         var result = Inspector.validate({
             type: 'object',
@@ -749,6 +899,9 @@ var ConfigValidators = {
             return result.format();
         }
 
+        return null;
+    },
+    rtiPartnerBaseConfig: function () {
         return null;
     },
     bidTransformerConfig: function (configs) {
@@ -868,6 +1021,12 @@ var ConfigValidators = {
     EventsService: function () {
         return null;
     },
+    KeyValueService: function () {
+        return null;
+    },
+    GptService: function () {
+        return null;
+    },
     HeaderStatsService: function (config) {
         var result = Inspector.validate({
             type: 'object',
@@ -955,6 +1114,17 @@ var ConfigValidators = {
                     optional: true
                 }
             }
+        }, configs);
+
+        if (!result.valid) {
+            return result.format();
+        }
+
+        return null;
+    },
+    AdaptiveTimeoutService: function (configs) {
+        var result = Inspector.validate({
+            type: 'object'
         }, configs);
 
         if (!result.valid) {

@@ -12,6 +12,7 @@ var Whoopsie = require('whoopsie.js');
 
 var EventsService;
 var RenderService;
+var KeyValueService;
 
 //? if (DEBUG) {
 var Scribe = require('scribe.js');
@@ -20,6 +21,7 @@ var Inspector = require('schema-inspector.js');
 //? }
 
 function Partner(profile, configs, requiredResources, fns) {
+
     var __profile;
 
     var __ready;
@@ -34,6 +36,16 @@ function Partner(profile, configs, requiredResources, fns) {
     var __parseResponse;
 
     var __bidTransformerDefaultConfigs;
+
+    var optData = {
+        keyValues: {}
+    };
+
+    var BID_TRANSFORMER_TYPES = {
+        PRICE: 'price',
+        TARGETING: 'targeting',
+        VIDEO: 'video'
+    };
 
     var _configs;
 
@@ -82,12 +94,18 @@ function Partner(profile, configs, requiredResources, fns) {
     function _generateBidTransformerConfig(type, defaults) {
         var typeConfigOverride = {};
 
-        if (type === 'price') {
+        if (type === BID_TRANSFORMER_TYPES.PRICE) {
             typeConfigOverride = {
                 outputCentsDivisor: 1,
                 outputPrecision: 0,
                 roundingType: 'NONE'
             };
+        } else if (type === BID_TRANSFORMER_TYPES.TARGETING) {
+
+            typeConfigOverride = configs.bidTransformer;
+        } else {
+
+            typeConfigOverride = configs.bidTransformerTypes[type];
         }
 
         return Utilities.mergeObjects(
@@ -100,9 +118,7 @@ function Partner(profile, configs, requiredResources, fns) {
 
             defaults || {},
 
-            configs.bidTransformer || {},
-
-            typeConfigOverride
+            typeConfigOverride || {}
         );
     }
 
@@ -174,13 +190,18 @@ function Partner(profile, configs, requiredResources, fns) {
             return Prms.resolve([]);
         }
 
-        var request = __generateRequestObj(returnParcels, sessionId);
+        optData.keyValues = KeyValueService.getDefaultKeyValueData();
+
+        if (KeyValueService.hasKeyValueAccess(__profile.partnerId)) {
+            optData.keyValues = KeyValueService.getKeyValueData();
+        }
+        var request = __generateRequestObj(returnParcels, optData);
 
         if (Utilities.isEmpty(request)) {
             //? if (DEBUG) {
             Scribe.info('Request object is empty. Aborting sending bid request.');
-
             //? }
+
             return Prms.resolve([]);
         }
 
@@ -264,6 +285,7 @@ function Partner(profile, configs, requiredResources, fns) {
                     }
 
                     EventsService.emit('partner_request_complete', {
+                        sessionId: sessionId,
                         partner: __profile.partnerId,
                         status: requestStatus,
                         //? if (DEBUG) {
@@ -276,6 +298,7 @@ function Partner(profile, configs, requiredResources, fns) {
 
                 onTimeout: function () {
                     EventsService.emit('partner_request_complete', {
+                        sessionId: sessionId,
                         partner: __profile.partnerId,
                         status: 'timeout',
                         //? if (DEBUG) {
@@ -293,6 +316,7 @@ function Partner(profile, configs, requiredResources, fns) {
 
                 onFailure: function () {
                     EventsService.emit('partner_request_complete', {
+                        sessionId: sessionId,
                         partner: __profile.partnerId,
                         status: 'error',
                         //? if (DEBUG) {
@@ -392,8 +416,9 @@ function Partner(profile, configs, requiredResources, fns) {
             if (__profile.targetingType === 'page') {
                 if (now <= __rateLimit) {
                     return [];
+                } else {
+                    __rateLimit = now + _configs.rateLimiting.value;
                 }
-                __rateLimit = now + _configs.rateLimiting.value;
             } else {
                 for (var i = inParcels.length - 1; i >= 0; i--) {
                     var htSlotId = inParcels[i].htSlot.getName();
@@ -428,6 +453,7 @@ function Partner(profile, configs, requiredResources, fns) {
     (function __constructor() {
         EventsService = SpaceCamp.services.EventsService;
         RenderService = SpaceCamp.services.RenderService;
+        KeyValueService = SpaceCamp.services.KeyValueService;
 
         //? if (DEBUG) {
         var results = ConfigValidators.PartnerProfile(profile, requiredResources, fns);
@@ -493,6 +519,28 @@ function Partner(profile, configs, requiredResources, fns) {
             price: {
 
                 bidUnitInCents: 1
+            },
+            video: {
+
+                bidUnitInCents: 1,
+                outputCentsDivisor: 1,
+                outputPrecision: 0,
+                roundingType: 'FLOOR',
+                floor: 0,
+                buckets: [
+                    {
+                        max: 300,
+                        step: 1
+                    },
+                    {
+                        max: 2000,
+                        step: 5
+                    },
+                    {
+                        max: 7000,
+                        step: 100
+                    }
+                ]
             }
         };
 
@@ -594,10 +642,13 @@ function Partner(profile, configs, requiredResources, fns) {
 
         if (profile.hasOwnProperty('bidUnitInCents')) {
             //? if(FEATURES.GPT_LINE_ITEMS) {
-            _bidTransformers.targeting = BidTransformer(_generateBidTransformerConfig('targeting'));
+            _bidTransformers.targeting = BidTransformer(_generateBidTransformerConfig(BID_TRANSFORMER_TYPES.TARGETING));
             //? }
             //? if(FEATURES.RETURN_PRICE) {
-            _bidTransformers.price = BidTransformer(_generateBidTransformerConfig('price'));
+            _bidTransformers.price = BidTransformer(_generateBidTransformerConfig(BID_TRANSFORMER_TYPES.PRICE));
+            //? }
+            //? if(FEATURES.VIDEO) {
+            _bidTransformers.video = BidTransformer(_generateBidTransformerConfig(BID_TRANSFORMER_TYPES.VIDEO));
             //? }
         }
 

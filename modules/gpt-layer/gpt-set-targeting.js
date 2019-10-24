@@ -13,6 +13,7 @@ var Scribe = require('scribe.js');
 //? }
 
 function GptSetTargeting(configs, state) {
+
     function setTargeting(sessionId, targetingParcels) {
         //? if (DEBUG) {
         var results = Inspector.validate({
@@ -20,7 +21,7 @@ function GptSetTargeting(configs, state) {
             strict: true,
             properties: {
                 sessionId: {
-                    type: 'string',
+                    type: ['string', 'null'],
                     minLength: 1
                 },
                 targetingParcels: {
@@ -30,7 +31,7 @@ function GptSetTargeting(configs, state) {
                         properties: {
                             targeting: {
                                 optional: true,
-                                type: 'object'
+                                type: ['object', 'null']
                             },
                             ref: {
                                 type: 'any',
@@ -64,7 +65,7 @@ function GptSetTargeting(configs, state) {
                 continue;
             }
 
-            if (targetingParcels[i].targetingType === 'slot') {
+            if (sessionId && targetingParcels[i].targetingType === 'slot') {
                 EventsService.emit('hs_slot_kv_pushed', {
                     sessionId: sessionId,
                     statsId: targetingParcels[i].partnerStatsId,

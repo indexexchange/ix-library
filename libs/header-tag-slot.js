@@ -8,6 +8,7 @@ var Inspector = require('schema-inspector.js');
 //? }
 
 function HeaderTagSlot(name, config) {
+
     var __name;
 
     var __id;
@@ -23,6 +24,8 @@ function HeaderTagSlot(name, config) {
     var __deviceType;
 
     var __position;
+
+    var __type;
 
     function __numericSortComparison(a, b) {
         return Number(a) - Number(b);
@@ -117,6 +120,19 @@ function HeaderTagSlot(name, config) {
         return __position;
     }
 
+    function getType() {
+        return __type;
+    }
+
+    function setType(type) {
+        //? if (DEBUG) {
+        if (!HeaderTagSlot.SlotTypes.hasOwnProperty(type)) {
+            throw Whoopsie('INVALID_TYPE', 'Type is unknown or invalid');
+        }
+        //? }
+        __type = type;
+    }
+
     (function __constructor() {
         //? if (DEBUG) {
         var results = ConfigValidators.HeaderTagSlot(config, name);
@@ -135,6 +151,7 @@ function HeaderTagSlot(name, config) {
         __targeting = null;
         __deviceType = null;
         __position = null;
+        __type = null;
 
         if (config.hasOwnProperty('divId')) {
             __divId = RegExp(config.divId);
@@ -181,6 +198,10 @@ function HeaderTagSlot(name, config) {
             __position = config.position;
         }
 
+        if (config.hasOwnProperty('type')) {
+            __type = config.type;
+        }
+
         config = undefined;
     })();
 
@@ -198,6 +219,8 @@ function HeaderTagSlot(name, config) {
         getTargeting: getTargeting,
         getDeviceType: getDeviceType,
         getPosition: getPosition,
+        getType: getType,
+        setType: setType,
 
         //? if(TEST) {
         __numericSortComparison: __numericSortComparison,
@@ -205,5 +228,10 @@ function HeaderTagSlot(name, config) {
         //? }
     };
 }
+
+HeaderTagSlot.SlotTypes = {
+    INSTREAM_VIDEO: 'INSTREAM_VIDEO',
+    BANNER: 'BANNER'
+};
 
 module.exports = HeaderTagSlot;

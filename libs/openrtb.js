@@ -9,7 +9,9 @@ var Inspector = require('schema-inspector.js');
 //? }
 
 function OpenRtb() {
+
     function BidRequest() {
+
         if (!(this instanceof BidRequest)) {
             return new BidRequest();
         }
@@ -136,6 +138,146 @@ function OpenRtb() {
         return id;
     };
 
+    BidRequest.prototype.addVideoImp = function (video, ext, bidFloor, bidFloorCur) {
+        //? if (DEBUG) {
+        var result = Inspector.validate({
+            type: 'object',
+            properties: {
+                video: {
+                    type: 'object',
+                    properties: {
+                        mimes: {
+                            type: 'array',
+                            minLength: 1,
+                            items: {
+                                type: 'string',
+                                minLength: 1
+                            }
+                        },
+                        minduration: {
+                            type: 'integer',
+                            gte: 0
+                        },
+                        maxduration: {
+                            type: 'integer',
+                            gte: 0
+                        },
+                        protocols: {
+                            optional: true,
+                            type: 'array',
+                            minLength: 1,
+                            items: {
+                                type: 'integer',
+                                eq: [
+                                    1,
+                                    2,
+                                    3,
+                                    4,
+                                    5,
+                                    6
+                                ]
+                            }
+                        },
+                        w: {
+                            optional: true,
+                            type: 'integer',
+                            gte: 0
+                        },
+                        h: {
+                            optional: true,
+                            type: 'integer',
+                            gte: 0
+                        },
+                        startdelay: {
+                            optional: true,
+                            type: 'integer',
+                            eq: [0, -1, -2]
+                        },
+                        playbackmethod: {
+                            optional: true,
+                            type: 'array',
+                            items: {
+                                type: 'integer',
+                                eq: [1, 2, 3, 4]
+                            }
+                        },
+                        api: {
+                            optional: true,
+                            type: 'array',
+                            items: {
+                                type: 'integer',
+                                eq: [
+                                    1,
+                                    2,
+                                    3,
+                                    4,
+                                    5
+                                ]
+                            }
+                        },
+                        placement: {
+                            optional: true,
+                            type: 'integer',
+                            eq: [
+                                1,
+                                2,
+                                3,
+                                4,
+                                5
+                            ]
+                        }
+                    }
+                },
+                ext: {
+                    type: 'object',
+                    properties: {
+                        sid: {
+                            optional: true,
+                            type: 'string',
+                            minLength: 1
+                        },
+                        siteID: {
+                            optional: true,
+                            type: 'string',
+                            minLength: 1
+                        }
+                    }
+                },
+                bidFloor: {
+                    optional: true,
+                    type: 'number',
+                    gte: Constants.MIN_BID_FLOOR
+                },
+                bidFloorCur: {
+                    optional: true,
+                    type: 'string',
+                    minLength: 1
+                }
+            }
+        }, {
+            video: video,
+            ext: ext,
+            bidFloor: bidFloor,
+            bidFloorCur: bidFloorCur
+        });
+        if (!result.valid) {
+            throw Whoopsie('INVALID_ARGUMENT', result.format());
+        }
+        //? }
+
+        var id = String(++this.__impCount);
+
+        this.__bidRequest.imp.push({
+            video: video,
+            ext: ext,
+            id: id,
+            bidfloor: bidFloor,
+            bidfloorcur: bidFloorCur
+        });
+
+        return id;
+    };
+
     BidRequest.prototype.addUserEid = function (data) {
         //? if (DEBUG) {
         var result = Inspector.validate({
@@ -220,6 +362,7 @@ function OpenRtb() {
     };
 
     function BidResponse(bidResponse) {
+
         if (!(this instanceof BidResponse)) {
             return new BidResponse(bidResponse);
         }
@@ -287,6 +430,31 @@ function OpenRtb() {
         bids.push(bid);
     };
 
+    BidResponse.prototype.__parseVideoBid = function (rawBid, bids) {
+        var bid = {};
+
+        if (rawBid.hasOwnProperty('price')) {
+            bid.price = rawBid.price;
+        }
+
+        if (rawBid.hasOwnProperty('ext')) {
+            bid.ext = {};
+            if (rawBid.ext.hasOwnProperty('vasturl')) {
+                bid.ext.vasturl = rawBid.ext.vasturl;
+            }
+
+            if (rawBid.ext.hasOwnProperty('dealid')) {
+                bid.ext.dealid = rawBid.ext.dealid;
+            }
+        }
+
+        if (rawBid.hasOwnProperty('impid')) {
+            bid.impid = rawBid.impid;
+        }
+
+        bids.push(bid);
+    };
+
     BidResponse.prototype.getId = function () {
         return this.__bidResponse.id;
     };
@@ -317,6 +485,30 @@ function OpenRtb() {
             innerBids = seatbid[i].bid;
             for (var j = 0; j < innerBids.length; j++) {
                 this.__parseBid(innerBids[j], bids);
+            }
+        }
+
+        return bids;
+    };
+
+    BidResponse.prototype.getVideoBids = function () {
+        var bids = [];
+        var innerBids;
+        var seatbid;
+
+        if (!this.__bidResponse.hasOwnProperty('seatbid')) {
+            return bids;
+        }
+
+        seatbid = this.__bidResponse.seatbid;
+        for (var i = 0; i < seatbid.length; i++) {
+            if (!seatbid[i].hasOwnProperty('bid')) {
+                continue;
+            }
+
+            innerBids = seatbid[i].bid;
+            for (var j = 0; j < innerBids.length; j++) {
+                this.__parseVideoBid(innerBids[j], bids);
             }
         }
 

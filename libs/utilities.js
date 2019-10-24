@@ -8,6 +8,7 @@ var Scribe = require('scribe.js');
 //? }
 
 function Utilities() {
+
     var __typeRegex = /\s([a-zA-Z]+)/;
 
     var __defaultMatcher = function (a, b) {
@@ -72,27 +73,27 @@ function Utilities() {
     function isArray(entity, type, className) {
         if (getType(entity) !== 'array') {
             return false;
-        }
-
-        if (typeof type !== 'undefined') {
-            if (!isString(type)) {
-                throw Whoopsie('INVALID_TYPE', '`type` must be a string');
-            }
-
-            if (type === 'class') {
-                if (!isString(className)) {
-                    throw Whoopsie('INVALID_TYPE', '`className` must be a string');
+        } else {
+            if (typeof type !== 'undefined') {
+                if (!isString(type)) {
+                    throw Whoopsie('INVALID_TYPE', '`type` must be a string');
                 }
 
-                for (var i = 0; i < entity.length; i++) {
-                    if (typeof entity[i] !== 'object' || entity[i].__type__ !== className) {
-                        return false;
+                if (type === 'class') {
+                    if (!isString(className)) {
+                        throw Whoopsie('INVALID_TYPE', '`className` must be a string');
                     }
-                }
-            } else {
-                for (var j = 0; j < entity.length; j++) {
-                    if (getType(entity[j]) !== type) {
-                        return false;
+
+                    for (var i = 0; i < entity.length; i++) {
+                        if (typeof entity[i] !== 'object' || entity[i].__type__ !== className) {
+                            return false;
+                        }
+                    }
+                } else {
+                    for (var j = 0; j < entity.length; j++) {
+                        if (getType(entity[j]) !== type) {
+                            return false;
+                        }
                     }
                 }
             }
@@ -198,11 +199,14 @@ function Utilities() {
     }
 
     function isEmpty(entity) {
+
         if (isString(entity)) {
+
             if (entity !== '') {
                 return false;
             }
         } else if (isObject(entity)) {
+
             for (var key in entity) {
                 if (!entity.hasOwnProperty(key)) {
                     continue;
@@ -211,6 +215,7 @@ function Utilities() {
                 return false;
             }
         } else if (isArray(entity)) {
+
             if (entity.length) {
                 return false;
             }
@@ -320,16 +325,14 @@ function Utilities() {
     }
 
     function repeatString(inString, count) {
-        var str = String(inString);
-        count = Number(count);
+        var str = '' + inString;
+        count = +count;
         if (count != count) {
             count = 0;
         }
-
         if (count < 0) {
             throw new RangeError('repeat count must be non-negative');
         }
-
         if (count == Infinity) {
             throw new RangeError('repeat count must be less than infinity');
         }
@@ -345,36 +348,35 @@ function Utilities() {
         for (var i = 0; i < count; i++) {
             rpt += str;
         }
-
         return rpt;
     }
 
     function padStart(inString, targetLength, padString) {
-        targetLength >>= 0;
+        targetLength = targetLength >> 0;
         padString = String(padString || ' ');
         if (inString.length > targetLength) {
             return String(inString);
+        } else {
+            targetLength = targetLength - inString.length;
+            if (targetLength > padString.length) {
+                padString += repeatString(padString, targetLength / padString.length);
+            }
+            return padString.slice(0, targetLength) + String(inString);
         }
-        targetLength -= inString.length;
-        if (targetLength > padString.length) {
-            padString += repeatString(padString, targetLength / padString.length);
-        }
-
-        return padString.slice(0, targetLength) + String(inString);
     }
 
     function padEnd(inString, targetLength, padString) {
-        targetLength >>= 0;
+        targetLength = targetLength >> 0;
         padString = String(padString || ' ');
         if (inString.length > targetLength) {
             return String(inString);
+        } else {
+            targetLength = targetLength - inString.length;
+            if (targetLength > padString.length) {
+                padString += repeatString(padString, targetLength / padString.length);
+            }
+            return String(inString) + padString.slice(0, targetLength);
         }
-        targetLength -= inString.length;
-        if (targetLength > padString.length) {
-            padString += repeatString(padString, targetLength / padString.length);
-        }
-
-        return String(inString) + padString.slice(0, targetLength);
     }
 
     function evalVariable(variableString, scope) {
@@ -431,6 +433,40 @@ function Utilities() {
         return mainArr;
     }
 
+    function appendToObject() {
+        var args = Array.prototype.slice.call(arguments);
+
+        //? if (DEBUG) {
+        var result = Inspector.validate({
+            type: 'array',
+            minLength: 2,
+            items: {
+                type: 'object'
+            }
+        }, args);
+
+        if (!result.valid) {
+            throw Whoopsie('INVALID_ARGUMENT', result.format());
+        }
+        //? }
+
+        var mainObj = args[0];
+
+        for (var i = 1; i < args.length; i++) {
+            var obj = args[i];
+
+            for (var key in obj) {
+                if (!obj.hasOwnProperty(key)) {
+                    continue;
+                }
+
+                mainObj[key] = obj[key];
+            }
+        }
+
+        return mainObj;
+    }
+
     return {
 
         //? if (DEBUG) {
@@ -461,7 +497,8 @@ function Utilities() {
         padEnd: padEnd,
         evalVariable: evalVariable,
         evalFunction: evalFunction,
-        appendToArray: appendToArray
+        appendToArray: appendToArray,
+        appendToObject: appendToObject
     };
 }
 
