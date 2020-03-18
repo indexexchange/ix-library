@@ -392,6 +392,45 @@ function PreGptShell() {
         return identityInfo;
     }
 
+    function retrieveVideoDemand(htSlotVideoDemandObjs, callback, options) {
+        if (!__directInterface.Layers.VideoInterfaceLayer.retrieveVideoDemandValidation(htSlotVideoDemandObjs, callback, options)) {
+            return;
+        }
+
+        try {
+            ComplianceService.delay(function () {
+                var receivedInfo = __directInterface.Layers.VideoInterfaceLayer.retrieveVideoDemand(htSlotVideoDemandObjs, options);
+
+                receivedInfo.promise
+                    .then(function (receivedDemand) {
+                        callback(receivedDemand);
+                    })
+                    .catch(function (ex) {
+                        //? if (DEBUG) {
+                        Scribe.error('Error occurred while retrieving demand');
+                        Scribe.error(ex.stack);
+                        //? }
+                        EventsService.emit('error', ex);
+
+                        setTimeout(callback.bind(null, {}), 0);
+                    });
+            })();
+        } catch (ex) {
+            //? if (DEBUG) {
+            Scribe.error('Error occurred while retrieving demand');
+            Scribe.error(ex.stack);
+            //? }
+
+            EventsService.emit('error', ex);
+
+            setTimeout(callback.bind(null, {}), 0);
+        }
+    }
+
+    function buildGamMvt(htSlotsParams, demandObjs) {
+        return __directInterface.Layers.VideoInterfaceLayer.buildGamMvt(htSlotsParams, demandObjs);
+    }
+
     (function __constructor() {
         SpaceCamp.LastLineGoogletag = {};
 
@@ -595,6 +634,8 @@ function PreGptShell() {
     shellInterface.setSiteKeyValueData = SpaceCamp.services.KeyValueService.setSiteKeyValueData;
     shellInterface.setUserKeyValueData = SpaceCamp.services.KeyValueService.setUserKeyValueData;
     shellInterface.getIdentityInfo = getIdentityInfo;
+    shellInterface.retrieveVideoDemand = retrieveVideoDemand;
+    shellInterface.buildGamMvt = buildGamMvt;
 
     /* PubKitTemplate<PartnerExports> */
 

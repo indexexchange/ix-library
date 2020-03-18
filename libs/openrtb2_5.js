@@ -9,7 +9,9 @@ var Inspector = require('schema-inspector.js');
 //? }
 
 function OpenRtb() {
+
     function BidRequest() {
+
         if (!(this instanceof BidRequest)) {
             return new BidRequest();
         }
@@ -245,6 +247,7 @@ function OpenRtb() {
     };
 
     BidRequest.prototype.setTest = function () {
+
         this.__bidRequest.test = 1;
     };
 
@@ -382,6 +385,7 @@ function OpenRtb() {
     };
 
     function BidResponse(bidResponse) {
+
         if (!(this instanceof BidResponse)) {
             return new BidResponse(bidResponse);
         }

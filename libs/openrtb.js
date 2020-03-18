@@ -343,6 +343,31 @@ function OpenRtb() {
         this.__bidRequest.user.ext.consent = gdprConsentString || '';
     };
 
+    BidRequest.prototype.setUspConsent = function (uspConsent) {
+        //? if (DEBUG) {
+        var result = Inspector.validate({
+            type: 'object',
+            strict: true,
+            properties: {
+                version: {
+                    type: 'integer'
+                },
+                uspString: {
+                    type: 'string'
+                }
+            }
+        }, uspConsent);
+        if (!result.valid) {
+            throw Whoopsie('INVALID_ARGUMENT', result.format());
+        }
+        //? }
+
+        this.__bidRequest.regs = this.__bidRequest.regs || {};
+        this.__bidRequest.regs.ext = this.__bidRequest.regs.ext || {};
+
+        this.__bidRequest.regs.ext.us_privacy = uspConsent.uspString;
+    };
+
     BidRequest.prototype.setExt = function (ext) {
         //? if (DEBUG) {
         var results = Inspector.validate({

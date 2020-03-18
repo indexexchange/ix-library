@@ -13,6 +13,7 @@ var Scribe = require('scribe.js');
 //? }
 
 function GptMapSlots(configs, state) {
+
     var __state;
 
     var __htSlotMapper;
@@ -67,6 +68,7 @@ function GptMapSlots(configs, state) {
             }
 
             for (var j = 0; j < googleSlotAllSizes.length; j++) {
+
                 if (Utilities.isString(googleSlotAllSizes[j])) {
                     continue;
                 }

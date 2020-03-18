@@ -11,7 +11,8 @@ var Inspector = require('schema-inspector.js');
 var Scribe = require('scribe.js');
 //? }
 
-function Network() {
+function Network(/*? if (TEST) { write('window'); } */) {
+
     var __xhrSupported;
 
     function isXhrSupported() {
@@ -273,6 +274,7 @@ function Network() {
         } else {
             script.onreadystatechange = function () {
                 if (script.readyState === 'loaded' || script.readyState === 'complete') {
+
                     script.onreadystatechange = null;
                     onSuccess();
                 }
@@ -312,6 +314,7 @@ function Network() {
         script.src = url;
 
         if (!args.useImgTag) {
+
             var node = scope.document.getElementsByTagName('script')[0];
 
             if (!node) {
@@ -323,6 +326,7 @@ function Network() {
                     scope.document.body.appendChild(script);
                 }
             } else {
+
                 node.parentNode.insertBefore(script, node);
             }
         }
@@ -518,6 +522,7 @@ function Network() {
             if (args.continueAfterTimeout) {
                 timer = setTimeout(onTimeout, args.timeout);
             } else {
+
                 xhr.timeout = args.timeout;
                 xhr.ontimeout = onTimeout;
             }
@@ -599,4 +604,9 @@ function Network() {
     };
 }
 
-module.exports = Network();
+module.exports = Network(/*? if (TEST) { write('window'); } */);
+
+//? if (TEST) {
+
+module.exports.Network = Network;
+//? }

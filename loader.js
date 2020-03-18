@@ -104,7 +104,11 @@ var LayerConstructors = {
     //? }
 
     //? if (COMPONENTS.LAYERS.IDENTITY_LAYER) {
-    IdentityLayer: require('identity-layer.js')
+    IdentityLayer: require('identity-layer.js'),
+    //? }
+
+    //? if (COMPONENTS.LAYERS.VIDEO_INTERFACE_LAYER) {
+    VideoInterfaceLayer: require('video-interface-layer.js')
     //? }
 };
 

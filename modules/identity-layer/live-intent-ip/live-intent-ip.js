@@ -1,17 +1,19 @@
 'use strict';
 
+var UserAgentMatcher = require('user-agent-matcher.js');
+
 var API;
 
 var TRADE_DESK_ID = '44489';
 
 var FPC_KEY = '_li_duid';
 
-var BASE_URL = '//idx.liadm.com/idx';
+var BASE_URL = '
 
 var profile = {
     partnerId: 'LiveIntentIp',
     statsId: 'LVINT',
-    version: '1.0.0',
+    version: '1.1.1',
     source: 'liveintent.com',
     cacheExpiry: {
 
@@ -57,6 +59,13 @@ function getTtdid() {
 }
 
 function retrieve() {
+
+    if (UserAgentMatcher.msie) {
+        API.registerError('Encrypted pid not supported in Internet Explorer');
+
+        return;
+    }
+
     var reqData = {};
 
     var fpc = getFpc();
@@ -78,16 +87,25 @@ function retrieve() {
                 var rsp = JSON.parse(data);
 
                 if (rsp && rsp.unifiedId) {
-                    API.registerMatch({
-                        source: profile.source,
-                        uids: [
-                            {
-                                id: rsp.unifiedId
-                            }
-                        ]
-                    });
+                    if (rsp.unifiedId.id && rsp.unifiedId.keyID) {
+                        API.registerMatch({
+                            source: profile.source,
+                            uids: [
+                                {
+                                    id: rsp.unifiedId.id,
+                                    ext: {
+                                        keyID: rsp.unifiedId.keyID,
+                                        rtiPartner: 'LDID',
+                                        enc: 1
+                                    }
+                                }
+                            ]
+                        });
+                    } else {
+                        API.registerError('response missing id and/or keyID');
+                    }
                 } else {
-                    API.registerError('response missing unifiedId');
+                    API.registerError('response missing unifiedId object');
                 }
             } catch (e) {
                 API.registerError('response is not valid JSON');
@@ -109,6 +127,22 @@ function main(apiObject) {
 }
 
 module.exports = {
+    //? if (TEST) {
+    test: {
+        get getFpc() {
+            return getFpc;
+        },
+        set getFpc(fn) {
+            getFpc = fn;
+        },
+        get getTtdid() {
+            return getTtdid;
+        },
+        set getTtdid(fn) {
+            getTtdid = fn;
+        }
+    },
+    //? }
     type: 'identity',
     api: '1',
     main: main,

@@ -9,6 +9,7 @@ var Scribe = require('scribe.js');
 //? }
 
 function GptClearTargeting(configs, state) {
+
     function clearTargeting(targetingParcels) {
         //? if (DEBUG) {
         var results = Inspector.validate({

@@ -7,6 +7,7 @@ var Scribe = require('scribe.js');
 //? }
 
 function CommandQueue(queue) {
+
     function push(fn) {
         if (!Utilities.isFunction(fn)) {
             //? if (DEBUG) {

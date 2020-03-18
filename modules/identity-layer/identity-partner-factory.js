@@ -8,6 +8,7 @@ var SpaceCamp = require('space-camp.js');
 var System = require('system.js');
 var Utilities = require('utilities.js');
 
+var ComplianceService;
 var EventsService;
 
 //? if (DEBUG) {
@@ -31,6 +32,8 @@ function IdentityPartnerFactory(partnerModule, validatedConfigs) {
 
     var __identityEbKv;
 
+    var __consentProvided;
+
     var __retrieveResolve;
 
     var __storageKey;
@@ -43,7 +46,7 @@ function IdentityPartnerFactory(partnerModule, validatedConfigs) {
         }
 
         return data.uids.every(function (e) {
-            return !Utilities.isEmpty(e) && e.id;
+            return Boolean(!Utilities.isEmpty(e) && e.id);
         });
     }
 
@@ -113,12 +116,7 @@ function IdentityPartnerFactory(partnerModule, validatedConfigs) {
         EventsService.emit('ip_module_result_' + __partnerId, type, data);
 
         if (type === 'match') {
-
             __identityStore = data;
-        }
-
-        if (__retrieveResolve) {
-            __retrieveResolve();
         }
     }
 
@@ -143,12 +141,47 @@ function IdentityPartnerFactory(partnerModule, validatedConfigs) {
 
         var cacheData = {
             response: type,
-            data: data
+            version: __partnerProfile.version
         };
+
+        if (type !== 'pass') {
+            cacheData.data = data;
+        }
+
+        if (Object.keys(__consentProvided).length) {
+            cacheData.consent = __consentProvided;
+        }
+
         var expiry = __partnerProfile.cacheExpiry[type];
         LocalCache.setData(__storageKey, cacheData, expiry);
 
         __registerRetrieval(type, data);
+
+        if (__retrieveResolve) {
+            __retrieveResolve();
+        }
+    }
+
+    function __apiUtilityGetConsent(type) {
+        if (!ComplianceService.isPrivacyEnabled()) {
+            return null;
+        }
+
+        if (type === 'gdpr') {
+            var consent = ComplianceService.gdpr.getConsent();
+
+            if (consent && consent.consentString) {
+                __consentProvided.gdpr = true;
+            }
+
+            return consent;
+        }
+
+        //? if (DEBUG) {
+        Scribe.warn('consent type invalid. consentType: ' + type);
+        //? }
+
+        return null;
     }
 
     function __apiUtilityGetIdentityResultFrom(partnerName) {
@@ -252,6 +285,151 @@ function IdentityPartnerFactory(partnerModule, validatedConfigs) {
         __identityEbKv = kv;
     }
 
+    function __bustCacheForConsentUpdate(cache) {
+
+        if (!__partnerProfile.consent || !ComplianceService.isPrivacyEnabled()) {
+            return false;
+        }
+
+        if (cache.data.consent
+            && Utilities.isArraySubset(Object.keys(__partnerProfile.consent), Object.keys(cache.data.consent))) {
+            return false;
+        }
+
+        return ComplianceService.wait().then(function () {
+
+            var shouldBust = Object.keys(__partnerProfile.consent).some(function (reg) {
+
+                if (cache.data.consent && cache.data.consent[reg]) {
+                    return false;
+                }
+
+                var data = ComplianceService[reg].getConsent();
+
+                return data && data.consentString;
+            });
+
+            //? if (DEBUG) {
+            if (shouldBust) {
+                Scribe.info('Cache bust for ' + __partnerId + ': Consent update available.');
+            }
+            //? }
+
+            return shouldBust;
+        });
+    }
+
+    function __bustCacheForModuleUpdate(cache) {
+        var shouldBust = cache.data.version !== __partnerProfile.version;
+
+        //? if (DEBUG) {
+        if (shouldBust) {
+            Scribe.info('Cache bust for ' + __partnerId + ': New partner module version.');
+        }
+        //? }
+
+        return shouldBust;
+    }
+
+    function __bustCacheForInvalidEids(cache) {
+        var shouldBust = !__validateEid(cache.data.data);
+
+        //? if (DEBUG) {
+        if (shouldBust) {
+            Scribe.warn('Cache bust for ' + __partnerId + ': Invalid Eids object in cache.');
+        }
+        //? }
+
+        return shouldBust;
+    }
+
+    var __cacheBustTriggers = {
+        match: [__bustCacheForInvalidEids],
+        pass: [__bustCacheForConsentUpdate, __bustCacheForModuleUpdate],
+        error: [__bustCacheForModuleUpdate]
+    };
+
+    function __waitForConsent() {
+
+        if (__partnerProfile.consent && ComplianceService.isPrivacyEnabled()) {
+            return ComplianceService.wait();
+        }
+
+        return null;
+    }
+
+    var __partnerRetrieveWaits = [__waitForConsent];
+
+    function __retrieveFromCache() {
+        var cache = LocalCache.getEntry(__storageKey);
+
+        return Prms.resolve()
+            .then(function () {
+                if (!cache) {
+                    //? if (DEBUG) {
+                    Scribe.info('Cache miss for ' + __partnerId);
+                    //? }
+
+                    return null;
+                }
+
+                var triggers = __cacheBustTriggers[cache.data.response];
+
+                if (!triggers) {
+                    //? if (DEBUG) {
+                    Scribe.warn('Invalid cached .response value for ' + __partnerId + ': ' + cache.data.response);
+                    //? }
+
+                    return null;
+                }
+
+                return Prms.all(triggers.map(function (trigger) {
+                    return trigger.call(null, cache);
+                }));
+            })
+            .then(function (results) {
+
+                if (!results || results.indexOf(true) > -1) {
+                    return null;
+                }
+
+                //? if (DEBUG) {
+                Scribe.info('Cache hit for ' + __partnerId);
+                //? }
+
+                EventsService.emit('hs_identity_cached', {
+                    statsId: __partnerStatsId
+                });
+
+                __registerRetrieval(cache.data.response, cache.data.data);
+
+                return cache.data;
+            });
+    }
+
+    function __retrieveFromPartner() {
+        return Prms.resolve()
+            .then(function () {
+
+                return Prms.all(__partnerRetrieveWaits.map(function (wait) {
+                    return wait.call();
+                }));
+            })
+            .then(function () {
+                return new Prms(function (resolve) {
+                    EventsService.emit('hs_identity_request', {
+                        statsId: __partnerStatsId
+                    });
+
+                    __isRegisterCalled = false;
+
+                    __retrieveResolve = resolve;
+
+                    EventsService.emit('ip_module_retrieve_' + __partnerId);
+                });
+            });
+    }
+
     function getStatsId() {
         return __partnerStatsId;
     }
@@ -274,46 +452,17 @@ function IdentityPartnerFactory(partnerModule, validatedConfigs) {
     }
 
     function retrieve() {
-        return new Prms(function (resolve) {
-            __retrieveResolve = resolve;
-
-            var cachedData = LocalCache.getData(__storageKey);
-            if (cachedData) {
-
-                if (cachedData.response !== 'match' || __validateEid(cachedData.data)) {
-                    //? if (DEBUG) {
-                    Scribe.info('Cache hit for ' + __partnerId + ', retrieving using cached value.');
-                    //? }
-
-                    EventsService.emit('hs_identity_cached', {
-                        statsId: __partnerStatsId
-                    });
-
-                    __registerRetrieval(cachedData.response, cachedData.data);
-
-                    return;
-                }
-
-                //? if (DEBUG) {
-                Scribe.warn('Invalid data cached for ' + __partnerId + ', ignoring value and re-retrieving from partner module.');
-                //? }
+        return __retrieveFromCache().then(function (results) {
+            if (!results) {
+                return __retrieveFromPartner();
             }
 
-            //? if (DEBUG) {
-            Scribe.info('Cache miss for ' + __partnerId + ', retrieving using partner module retrieve.');
-            //? }
-
-            EventsService.emit('hs_identity_request', {
-                statsId: __partnerStatsId
-            });
-
-            __isRegisterCalled = false;
-
-            EventsService.emit('ip_module_retrieve_' + __partnerId);
+            return null;
         });
     }
 
     (function __constructor() {
+        ComplianceService = SpaceCamp.services.ComplianceService;
         EventsService = SpaceCamp.services.EventsService;
 
         //? if (DEBUG) {
@@ -332,6 +481,7 @@ function IdentityPartnerFactory(partnerModule, validatedConfigs) {
         __identityEbKv = null;
         __retrieveResolve = null;
         __storageKey = __partnerId;
+        __consentProvided = {};
 
         __partnerApi = {
             Utilities: {
@@ -352,8 +502,9 @@ function IdentityPartnerFactory(partnerModule, validatedConfigs) {
                 isTopFrame: Browser.isTopFrame,
                 isXhrSupported: Network.isXhrSupported,
 
-                getIdentityResultFrom: __apiUtilityGetIdentityResultFrom,
-                ajax: __apiUtilityGuardedAjax
+                ajax: __apiUtilityGuardedAjax,
+                getConsent: __apiUtilityGetConsent,
+                getIdentityResultFrom: __apiUtilityGetIdentityResultFrom
             },
 
             onRetrieve: EventsService.on.bind(null, 'ip_module_retrieve_' + __partnerId),
@@ -379,6 +530,10 @@ function IdentityPartnerFactory(partnerModule, validatedConfigs) {
         //? if (TEST) {
         __partnerProfile: __partnerProfile,
         __partnerApi: __partnerApi,
+
+        __cacheBustTriggers: __cacheBustTriggers,
+        __partnerRetrieveWaits: __partnerRetrieveWaits,
+
         get __identityStore() {
             return __identityStore;
         },
@@ -400,8 +555,32 @@ function IdentityPartnerFactory(partnerModule, validatedConfigs) {
         //? }
 
         //? if (TEST) {
-        __validateEid: __validateEid,
         __registerResponseRetrieval: __registerResponseRetrieval,
+
+        __bustCacheForInvalidEids: __bustCacheForInvalidEids,
+        __bustCacheForConsentUpdate: __bustCacheForConsentUpdate,
+        __bustCacheForModuleUpdate: __bustCacheForModuleUpdate,
+
+        __waitForConsent: __waitForConsent,
+
+        get __validateEid() {
+            return __validateEid;
+        },
+        set __validateEid(val) {
+            __validateEid = val;
+        },
+        get __retrieveFromCache() {
+            return __retrieveFromCache;
+        },
+        set __retrieveFromCache(val) {
+            __retrieveFromCache = val;
+        },
+        get __retrieveFromPartner() {
+            return __retrieveFromPartner;
+        },
+        set __retrieveFromPartner(val) {
+            __retrieveFromPartner = val;
+        },
         get __registerRetrieval() {
             return __registerRetrieval;
         },

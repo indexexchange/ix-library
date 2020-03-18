@@ -2,10 +2,7 @@
 
 var Browser = require('browser.js');
 var CommandQueue = require('command-queue.js');
-var HeaderTagSlot = require('header-tag-slot.js');
 var Loader = require('loader.js');
-var Mvt = require('mvt.js');
-var Size = require('size.js');
 var SpaceCamp = require('space-camp.js');
 var Utilities = require('utilities.js');
 
@@ -331,49 +328,13 @@ function DirectBiddingShell() {
     }
 
     function retrieveVideoDemand(htSlotVideoDemandObjs, callback, options) {
-        if (!Utilities.isFunction(callback)) {
-            throw new Error('callback must be a function');
+        if (!__directInterface.Layers.VideoInterfaceLayer.retrieveVideoDemandValidation(htSlotVideoDemandObjs, callback, options)) {
+            return;
         }
 
         try {
-            if (!Utilities.isArray(htSlotVideoDemandObjs, 'object')) {
-                callback({}, new Error('htSlotVideoDemandObjs must be an array of objects'));
-
-                return;
-            }
-
-            for (var i = 0; i < htSlotVideoDemandObjs.length; i++) {
-                var htSlot = htSlotVideoDemandObjs[i];
-
-                if (!htSlot.hasOwnProperty('htSlotName')) {
-                    callback({}, new Error('htSlotVideoDemandObjs[' + i + ']: members must contain the htSlotName property'));
-
-                    return;
-                }
-
-                if (!Utilities.isString(htSlot.htSlotName)) {
-                    callback({}, new Error('htSlotVideoDemandObjs[' + i + ']: htSlotName must be a string'));
-
-                    return;
-                }
-            }
-
-            if (Utilities.getType(options) !== 'undefined') {
-                if (!Utilities.isObject(options)) {
-                    callback({}, new Error('options must be an object'));
-
-                    return;
-                }
-
-                if (options.hasOwnProperty('timeout') && (!Utilities.isInteger(options.timeout) || options.timeout < 0)) {
-                    callback({}, new Error('options.timeout must be an integer greater than 0'));
-
-                    return;
-                }
-            }
-
             ComplianceService.delay(function () {
-                var receivedInfo = __directInterface.Layers.DirectBiddingLayer.retrieveVideoDemand(htSlotVideoDemandObjs, options);
+                var receivedInfo = __directInterface.Layers.VideoInterfaceLayer.retrieveVideoDemand(htSlotVideoDemandObjs, options);
 
                 receivedInfo.promise
                     .then(function (receivedDemand) {
@@ -402,131 +363,7 @@ function DirectBiddingShell() {
     }
 
     function buildGamMvt(htSlotsParams, demandObjs) {
-        if (!Utilities.isObject(htSlotsParams)) {
-            throw new Error('htSlotsParams must be an object');
-        }
-
-        if (!Utilities.isObject(demandObjs)) {
-            throw new Error('demandObjs must be an object');
-        }
-
-        var mvts = {};
-        var specialCaseKeys = ['iu', 'description_url', 'cust_params', 'sz'];
-
-        for (var htSlotName in htSlotsParams) {
-            if (!htSlotsParams.hasOwnProperty(htSlotName)) {
-                continue;
-            }
-
-            var htSlotParams = htSlotsParams[htSlotName];
-
-            if (!Utilities.isObject(htSlotParams)) {
-                throw new Error('htSlotsParams.' + htSlotName + ' must be an object');
-            }
-
-            if (!htSlotParams.hasOwnProperty('iu') || !Utilities.isString(htSlotParams.iu) || Utilities.isEmpty(htSlotParams.iu)) {
-                throw new Error('htSlotsParams.' + htSlotName + '.iu must exist and must be a non empty string');
-            }
-
-            if (!htSlotParams.hasOwnProperty('description_url') || !Utilities.isString(htSlotParams.description_url) || Utilities.isEmpty(htSlotParams.description_url)) {
-                throw new Error('htSlotsParams.' + htSlotName + '.description_url must exist and must be a non empty string');
-            }
-
-            if (htSlotParams.hasOwnProperty('sz') && !Size.isSize(htSlotParams.sz) && !Size.isSizes(htSlotParams.sz)) {
-                throw new Error('htSlotsParams.' + htSlotName + '.sz must be in the format [width, height] or [[width, height], [width, height], ...]');
-            }
-
-            if (htSlotParams.hasOwnProperty('cust_params')) {
-                if (!Utilities.isObject(htSlotParams.cust_params)) {
-                    throw new Error('htSlotsParams.' + htSlotName + '.cust_params must be an object');
-                }
-
-                var custParams = htSlotParams.cust_params;
-
-                for (var custParamsKey in custParams) {
-                    if (!custParams.hasOwnProperty(custParamsKey)) {
-                        continue;
-                    }
-
-                    if (!Utilities.isArray(custParams[custParamsKey], 'string')) {
-                        throw new Error('htSlotsParams.' + htSlotName + '.cust_params.' + custParamsKey + ' must be an array of string');
-                    }
-                }
-            }
-
-            for (var slotParamskey in htSlotParams) {
-                if (!htSlotParams.hasOwnProperty(slotParamskey)) {
-                    continue;
-                }
-
-                if (specialCaseKeys.indexOf(slotParamskey) !== -1) {
-                    continue;
-                }
-
-                if (!Utilities.isString(htSlotParams[slotParamskey]) && !Utilities.isNumber(htSlotParams[slotParamskey])) {
-                    throw new Error('htSlotsParams.' + htSlotName + '.' + slotParamskey + ' must be a string or number');
-                }
-
-                if (Utilities.isString(htSlotParams[slotParamskey]) && Utilities.isEmpty(htSlotParams[slotParamskey])) {
-                    throw new Error('htSlotsParams.' + htSlotName + '.' + slotParamskey + ' must be a non empty string or number');
-                }
-            }
-
-            var mvtDemandObjs = [];
-
-            if (demandObjs.hasOwnProperty(htSlotName)) {
-                var slotDemandObjs = demandObjs[htSlotName];
-
-                if (!Utilities.isArray(slotDemandObjs, 'object')) {
-                    throw new Error('demandObjs.' + htSlotName + ' must be an array of objects');
-                }
-
-                for (var j = 0; j < slotDemandObjs.length; j++) {
-                    if (!slotDemandObjs[j].hasOwnProperty('size') || !Size.isSize(slotDemandObjs[j].size)) {
-                        throw new Error('demandObjs.' + htSlotName + '[' + j + '].size must exist and must be an array of 2 numbers');
-                    }
-
-                    if (slotDemandObjs[j].hasOwnProperty('targeting') && !Utilities.isObject(slotDemandObjs[j].targeting)) {
-                        throw new Error('demandObjs.' + htSlotName + '[' + j + '].targeting must be an object');
-                    }
-                }
-
-                try {
-                    mvtDemandObjs = Mvt.mediateVideoBids(slotDemandObjs);
-                } catch (ex) {
-
-                    //? if (DEBUG) {
-                    Scribe.error('Error occurred while mediating demand');
-                    Scribe.error(ex.stack);
-                    //? }
-                }
-            } else {
-
-                var htSlotsMap = SpaceCamp.htSlotsMap;
-
-                if (!htSlotsMap.hasOwnProperty(htSlotName) || htSlotsMap[htSlotName].getType() !== HeaderTagSlot.SlotTypes.INSTREAM_VIDEO) {
-                    throw new Error('htSlotName ' + htSlotName + ' does not exist');
-                }
-
-                mvtDemandObjs = [
-                    {
-                        size: htSlotsMap[htSlotName].getSizes(Browser.getViewportWidth(), Browser.getViewportHeight())[0]
-                    }
-                ];
-            }
-
-            try {
-                mvts[htSlotName] = Mvt.buildDfpMvt(htSlotParams, mvtDemandObjs);
-            } catch (ex) {
-
-                //? if (DEBUG) {
-                Scribe.error('Error occurred while constructing mvt');
-                Scribe.error(ex.stack);
-                //? }
-            }
-        }
-
-        return mvts;
+        return __directInterface.Layers.VideoInterfaceLayer.buildGamMvt(htSlotsParams, demandObjs);
     }
 
     function getTimeout() {

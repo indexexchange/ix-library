@@ -9,7 +9,7 @@ var Utilities = require('utilities.js');
 var Whoopsie = require('whoopsie.js');
 
 var PartnerConstructors = {
-    /* PubKitTemplate<PartnerConstructors> */
+
 };
 
 //? if (FEATURES.PREFETCH) {

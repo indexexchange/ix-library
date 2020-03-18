@@ -48,19 +48,17 @@ function MvtBuilder() {
     }
 
     function __buildCustParamsString(obj) {
-        var params = {};
+        var paramsString = '';
 
         for (var key in obj) {
             if (!obj.hasOwnProperty(key)) {
                 continue;
             }
 
-            var value = obj[key].join(',');
-
-            params[key] = value;
+            paramsString = paramsString + key + '=' + obj[key].join(',') + '&';
         }
 
-        return Network.objToQueryString(params);
+        return paramsString.slice(0, -1);
     }
 
     function mediateVideoBids(slotDemand) {

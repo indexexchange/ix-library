@@ -8,8 +8,9 @@ var Whoopsie = require('whoopsie.js');
 //? }
 
 function Size() {
+
     var __specialSizeStrings = {
-        native: true,
+        'native': true,
         fullwidth: true
     };
 

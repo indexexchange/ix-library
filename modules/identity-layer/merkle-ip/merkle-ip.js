@@ -4,14 +4,14 @@ var UserAgentMatcher = require('user-agent-matcher.js');
 
 var API;
 
-var BASE_URL = '//mid.rkdms.com/idsv2';
+var BASE_URL = '//mid.rkdms.com/idsv2',
 
 var AUTHORIZATION_TOKEN = '17c1789b-e660-493b-aa74-3c8fb990dc5f';
 
 var profile = {
     partnerId: 'MerkleIp',
     statsId: 'MRKL',
-    version: '1.3.1',
+    version: '1.4.2',
     source: 'merkleinc.com',
     cacheExpiry: {
 
@@ -28,6 +28,8 @@ var profile = {
 
 function retrieve() {
     var reqData = {};
+
+    var entrypoints = [];
 
     reqData.ptk = AUTHORIZATION_TOKEN;
     reqData.pubid = API.configs.pubid;

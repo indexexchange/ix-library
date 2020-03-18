@@ -9,6 +9,7 @@ var Inspector = require('schema-inspector.js');
 //? }
 
 function Scribe() {
+
     var __level;
 
     var __header;
@@ -22,6 +23,7 @@ function Scribe() {
     //? }
 
     function __getPrefix() {
+
         var caller = 'unknown';
 
         var re = /at\s(.+)/g;

@@ -223,7 +223,6 @@ function PostGptShell() {
     shellInterface.display = ComplianceService.delay(display);
     shellInterface.setSiteKeyValueData = SpaceCamp.services.KeyValueService.setSiteKeyValueData;
     shellInterface.setUserKeyValueData = SpaceCamp.services.KeyValueService.setUserKeyValueData;
-
     /* PubKitTemplate<PartnerExports> */
 
     return shellInterface;

@@ -17,11 +17,16 @@ var Whoopsie = require('whoopsie.js');
 var TimerService;
 
 function ComplianceService(configs) {
+
     var __CMP_CHECK_INTERVAL = 250;
 
     var __gdprApplies;
 
     var __gdprConsentString;
+
+    var __uspVersion;
+
+    var __uspString;
 
     var __cmd;
 
@@ -37,6 +42,9 @@ function ComplianceService(configs) {
 
     var __retrievalDefer;
 
+    var __gdprDefer;
+    var __ccpaDefer;
+
     var __complianceTimerId;
 
     var __customCmpFunction;
@@ -45,7 +53,10 @@ function ComplianceService(configs) {
 
     var __postMessageId = 0;
 
+    var __uspPostMessageId = 0;
+
     function __interpretCmpResultObject(result) {
+
         if (result.hasOwnProperty('gdprApplies')
             && Utilities.getType(result.gdprApplies) === 'boolean') {
             __gdprApplies = result.gdprApplies;
@@ -57,6 +68,18 @@ function ComplianceService(configs) {
         if (result.hasOwnProperty('consentData')
             && Utilities.getType(result.consentData) === 'string') {
             __gdprConsentString = result.consentData;
+        }
+    }
+
+    function __interpretUspResultObject(result) {
+        if (result.hasOwnProperty('version')
+            && Utilities.getType(result.version) === 'integer') {
+            __uspVersion = result.version;
+        }
+
+        if (result.hasOwnProperty('uspString')
+            && Utilities.getType(result.uspString) === 'string') {
+            __uspString = result.uspString;
         }
     }
 
@@ -93,7 +116,32 @@ function ComplianceService(configs) {
             //? }
         }
 
-        __retrievalDefer.resolve();
+        __gdprDefer.resolve();
+    }
+
+    function __uspCallback(result, success) {
+        var type = Utilities.getType(result);
+
+        if (type === 'undefined' || !success) {
+            return;
+        }
+
+        //? if (DEBUG) {
+        Scribe.info('USP callback received result: ' + JSON.stringify(result));
+        //? }
+
+        if (type === 'object') {
+            //? if (DEBUG) {
+            Scribe.info('USP result interpreted as object');
+            //? }
+            __interpretUspResultObject(result);
+        } else {
+            //? if (DEBUG) {
+            Scribe.warn('USP result had unexpected type: ' + type);
+            //? }
+        }
+
+        __ccpaDefer.resolve();
     }
 
     function __makeCmpCaller(inWindow, custom) {
@@ -118,6 +166,19 @@ function ComplianceService(configs) {
                     Scribe.error(ex);
                     //? }
                 }
+            }
+        };
+    }
+
+    function __makeUspCaller() {
+        return function () {
+            try {
+                window.__uspapi('getUSPData', __uspVersion, __uspCallback);
+            } catch (ex) {
+                //? if (DEBUG) {
+                Scribe.error('USP function error:');
+                Scribe.error(ex);
+                //? }
             }
         };
     }
@@ -148,6 +209,32 @@ function ComplianceService(configs) {
         }
     }
 
+    function __uspMessageListener(ev) {
+        try {
+            var dataObj;
+
+            if (Utilities.getType(ev.data) === 'string') {
+                dataObj = JSON.parse(ev.data);
+            } else {
+                dataObj = ev.data;
+            }
+
+            if (!dataObj.hasOwnProperty('__uspapiReturn') || Utilities.getType(dataObj.__uspapiReturn) !== 'object') {
+                return;
+            }
+
+            var retVal = dataObj.__uspapiReturn;
+            if (retVal.callId === __uspPostMessageId) {
+                __uspCallback(retVal.returnValue, retVal.success);
+                window.removeEventListener('message', __uspMessageListener, false);
+            }
+        } catch (ex) {
+            //? if (DEBUG) {
+            Scribe.error('Error occurred while handling Uspapi inter-frame message: ', ex.stack);
+            //? }
+        }
+    }
+
     function setGdprApplies(applies) {
         //? if (DEBUG){
         var results = Inspector.validate({
@@ -171,12 +258,20 @@ function ComplianceService(configs) {
         };
     }
 
+    function getCcpaConsent() {
+        return {
+            version: __uspVersion,
+            uspString: __uspString
+        };
+    }
+
     function isPrivacyEnabled() {
         return true;
     }
 
     function delay(func) {
         return function () {
+
             if (__status !== __EnumStatuses.COMPLETE && __complianceTimerId) {
                 TimerService.startTimer(__complianceTimerId);
             }
@@ -189,19 +284,7 @@ function ComplianceService(configs) {
         };
     }
 
-    function __retrieve() {
-        if (__status !== __EnumStatuses.NOT_STARTED) {
-            return;
-        }
-
-        __retrievalDefer = Prms.defer();
-
-        __status = __EnumStatuses.IN_PROGRESS;
-
-        __retrievalDefer.promise.then(function () {
-            __cmd = CommandQueue(__cmd);
-            __status = __EnumStatuses.COMPLETE;
-        });
+    function __retrieveGdpr() {
 
         var calledCmpSomehow = false;
         var inWindow = false;
@@ -222,12 +305,14 @@ function ComplianceService(configs) {
         }
 
         if (inWindow || custom) {
+
             calledCmpSomehow = true;
 
             var callCmpOnce = __makeCmpCaller(inWindow, custom);
             callCmpOnce();
 
             if (__complianceTimeout > 0) {
+
                 var cmpCallIntervalId = window.setInterval(callCmpOnce, __CMP_CHECK_INTERVAL);
 
                 __retrievalDefer.promise.then(function () {
@@ -235,6 +320,7 @@ function ComplianceService(configs) {
                 });
             }
         } else {
+
             //? if (DEBUG) {
             Scribe.info('Looking for CMP ancestor frame.');
             //? }
@@ -268,18 +354,108 @@ function ComplianceService(configs) {
         }
 
         if (!calledCmpSomehow) {
-            __retrievalDefer.resolve();
+            __gdprDefer.resolve();
+        }
 
+        return calledCmpSomehow;
+    }
+
+    function __retrieveCcpa() {
+
+        var calledUspSomehow = false;
+
+        if (window.__uspapi && Utilities.getType(window.__uspapi) === 'function') {
+            //? if (DEBUG) {
+            Scribe.info('Found Uspapi in window.__uspapi');
+            //? }
+
+            calledUspSomehow = true;
+
+            var callUsp = __makeUspCaller();
+            callUsp();
+        } else {
+
+            //? if (DEBUG) {
+            Scribe.info('Looking for Uspapi ancestor frame.');
+            //? }
+
+            var uspFrame = Browser.traverseContextTree(function (context) {
+                var childElements = context.document.getElementsByName('__uspapiLocator');
+                if (childElements.length > 0 && childElements[0].tagName.toLowerCase() === 'iframe') {
+                    return context;
+                }
+
+                return null;
+            });
+
+            if (uspFrame) {
+                calledUspSomehow = true;
+
+                __uspPostMessageId = System.generateUniqueId();
+
+                var message = {
+                    __uspapiCall: {
+                        command: 'getUSPData',
+                        parameter: null,
+                        version: __uspVersion,
+                        callId: __uspPostMessageId
+                    }
+                };
+
+                window.addEventListener('message', __uspMessageListener, false);
+
+                uspFrame.postMessage(message, '*');
+            }
+        }
+
+        if (!calledUspSomehow) {
+            __ccpaDefer.resolve();
+        }
+
+        return calledUspSomehow;
+    }
+
+    function __retrieve() {
+
+        if (__status !== __EnumStatuses.NOT_STARTED) {
             return;
         }
+
+        __retrievalDefer = Prms.defer();
+        __gdprDefer = Prms.defer();
+        __ccpaDefer = Prms.defer();
+
+        __status = __EnumStatuses.IN_PROGRESS;
+
+        __retrievalDefer.promise.then(function () {
+
+            __cmd = CommandQueue(__cmd);
+            __status = __EnumStatuses.COMPLETE;
+        });
+
+        Prms.all([__gdprDefer.promise, __ccpaDefer.promise]).then(function () {
+            __retrievalDefer.resolve();
+        });
+
+        var calledCMP = __retrieveGdpr();
+
+        var calledUsp = __retrieveCcpa();
+
+        //? if (DEBUG) {
+
+        if (!calledCMP && !calledUsp) {
+            Scribe.info('No privacy method found, resolved right away');
+        }
+        //? }
 
         if (__complianceTimeout === 0) {
             __retrievalDefer.resolve();
         } else if (!__complianceTimerId) {
+
             __complianceTimerId = TimerService.createTimer(__complianceTimeout, false, function () {
                 //? if (DEBUG) {
                 if (__status !== __EnumStatuses.COMPLETE) {
-                    Scribe.info('CMP timed out with no result, using default (no consent)');
+                    Scribe.info('Privacy APIs timed out with no result, using default');
                 }
                 //? }
                 __retrievalDefer.resolve();
@@ -288,6 +464,7 @@ function ComplianceService(configs) {
     }
 
     function wait() {
+
         if (__status === __EnumStatuses.NOT_STARTED) {
             __retrieve();
         }
@@ -312,6 +489,8 @@ function ComplianceService(configs) {
 
         __gdprApplies = configs.gdprAppliesDefault;
         __gdprConsentString = '';
+        __uspVersion = 1;
+        __uspString = '';
         __cmd = [];
         __complianceTimeout = configs.timeout;
         __status = __EnumStatuses.NOT_STARTED;
@@ -352,6 +531,11 @@ function ComplianceService(configs) {
             setApplies: setGdprApplies
         },
 
+        usp: {
+
+            getConsent: getCcpaConsent
+        },
+
         isPrivacyEnabled: isPrivacyEnabled,
         delay: delay,
         wait: wait,
@@ -359,6 +543,8 @@ function ComplianceService(configs) {
         //? if (TEST) {
         __gdprApplies: __gdprApplies,
         __gdprConsentString: __gdprConsentString,
+        __uspVersion: __uspVersion,
+        __uspString: __uspString,
         __retrieve: __retrieve,
         __interpretCmpResultObject: __interpretCmpResultObject,
         __cmpCallback: __cmpCallback,

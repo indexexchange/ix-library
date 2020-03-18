@@ -9,6 +9,7 @@ var Scribe = require('scribe.js');
 //? }
 
 function EventsService() {
+
     var __eventsMap;
 
     function __on(event, once, fn) {
