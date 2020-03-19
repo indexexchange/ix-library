@@ -23,8 +23,6 @@ function DirectBiddingLayer(configs) {
 
     var __desktopGlobalTimeout;
     var __mobileGlobalTimeout;
-    var __desktopVideoGlobalTimeout;
-    var __mobileVideoGlobalTimeout;
 
     function retrieveDemand(htSlotDemandObjs, options) {
         //? if (DEBUG){
@@ -57,7 +55,7 @@ function DirectBiddingLayer(configs) {
             var slotFound = false;
             for (var j = 0; j < SpaceCamp.htSlots.length; j++) {
 
-                if (SpaceCamp.htSlots[j].getType() !== null) {
+                if (SpaceCamp.htSlots[j].getType() !== HeaderTagSlot.SlotTypes.BANNER) {
                     continue;
                 }
 
@@ -254,252 +252,6 @@ function DirectBiddingLayer(configs) {
         };
     }
 
-    function retrieveVideoDemand(htSlotVideoDemandObjs, options) {
-        //? if (DEBUG){
-        var results = Inspector.validate({
-            type: 'object',
-            strict: true,
-            properties: {
-                htSlotVideoDemandObjs: {
-                    type: 'array',
-                    items: {
-                        type: 'object',
-                        strict: true,
-                        properties: {
-                            htSlotName: {
-                                type: 'string',
-                                minLength: 1
-                            }
-                        }
-                    }
-                },
-                options: {
-                    optional: true,
-                    type: 'object',
-                    strict: true,
-                    properties: {
-                        timeout: {
-                            optional: true,
-                            type: 'number',
-                            gte: 1
-                        }
-                    }
-                }
-            }
-        }, {
-            htSlotVideoDemandObjs: htSlotVideoDemandObjs,
-            options: options
-        });
-
-        if (!results.valid) {
-            throw Whoopsie('INVALID_ARGUMENT', results.format());
-        }
-        //? }
-
-        var outParcels = [];
-
-        for (var i = 0; i < htSlotVideoDemandObjs.length; i++) {
-            var slotFound = false;
-            for (var j = 0; j < SpaceCamp.htSlots.length; j++) {
-
-                if (SpaceCamp.htSlots[j].getType() !== HeaderTagSlot.SlotTypes.INSTREAM_VIDEO) {
-                    continue;
-                }
-
-                if (htSlotVideoDemandObjs[i].htSlotName === SpaceCamp.htSlots[j].getName()) {
-                    slotFound = true;
-                    var newParcel = {
-                        htSlot: SpaceCamp.htSlots[j],
-                        ref: ''
-                    };
-                    outParcels.push(newParcel);
-                }
-            }
-
-            if (!slotFound) {
-                //? if (DEBUG){
-                Scribe.info('unrecognized header tag slot name ' + htSlotVideoDemandObjs[i].htSlotName);
-                //? }
-                EventsService.emit('error', 'unrecognized header tag slot name ' + htSlotVideoDemandObjs[i].htSlotName + ' in call to retrieveVideoDemand');
-            }
-        }
-
-        if (outParcels.length === 0) {
-            //? if (DEBUG){
-            Scribe.warn('no valid header tag slots found in call to retrieveVideoDemand');
-            //? }
-            EventsService.emit('warning', 'no valid header tag slots found in call to retrieveVideoDemand');
-
-            return {
-                sessionId: '',
-                promise: Prms.resolve({})
-            };
-        }
-
-        var calculatedTimeout = __desktopVideoGlobalTimeout;
-
-        if (Utilities.getType(options) === 'undefined' || !options.hasOwnProperty('timeout')) {
-            if (SpaceCamp.DeviceTypeChecker.getDeviceType() === 'mobile') {
-                calculatedTimeout = __mobileVideoGlobalTimeout;
-            }
-
-            //? if (COMPONENTS.SERVICES.ADAPTIVE_TIMEOUT) {
-
-            //? if (DEBUG) {
-            if (SpaceCamp.services.hasOwnProperty('AdaptiveTimeoutService')) {
-            //? }
-                try {
-                    calculatedTimeout = SpaceCamp.services.AdaptiveTimeoutService.getTimeout(calculatedTimeout);
-                } catch (ex) {
-                    //? if (DEBUG) {
-                    Scribe.error('Error occurred while calculating Adaptive Timeout.');
-                    Scribe.error(ex.stack);
-                    //? }
-                }
-            //? if (DEBUG) {
-            }
-            //? }
-            //? }
-        } else {
-            calculatedTimeout = options.timeout;
-        }
-
-        //? if (DEBUG) {
-        Scribe.info('Calculated Timeout: ' + calculatedTimeout);
-        //? }
-
-        SpaceCamp.globalTimeout = calculatedTimeout;
-
-        var sessionId = TimerService.createTimer(calculatedTimeout, true);
-        EventsService.emit('hs_session_start', {
-            sessionId: sessionId,
-            timeout: calculatedTimeout,
-            sessionType: HeaderStatsService.SessionTypes.VIDEO
-        });
-
-        TimerService.addTimerCallback(sessionId, function () {
-            EventsService.emit('global_timeout_reached', {
-                sessionId: sessionId
-            });
-        });
-
-        var retPromise = baseClass._executeNext(sessionId, outParcels).then(function (receivedParcels) {
-            //? if (DEBUG) {
-            var results = Inspector.validate({
-                type: 'array',
-                items: {
-                    type: 'object',
-                    properties: {
-                        partnerId: {
-                            type: 'string',
-                            minLength: 1
-                        },
-                        htSlot: {
-                            type: 'object'
-                        },
-                        size: {
-                            type: 'array',
-                            exactLength: 2,
-                            items: {
-                                type: 'number',
-                                gte: 0
-                            }
-                        },
-                        targetingType: {
-                            optional: true,
-                            type: 'string'
-                        },
-                        targeting: {
-                            optional: true,
-                            type: 'object',
-                            properties: {
-                                price: {
-                                    optional: true,
-                                    type: 'object'
-                                },
-                                deal: {
-                                    optional: true,
-                                    type: 'object'
-                                }
-                            }
-                        },
-                        price: {
-                            optional: true,
-                            type: 'number',
-                            gte: 1
-                        },
-                        dealId: {
-                            optional: true,
-                            type: 'string',
-                            minLength: 1
-                        },
-                        pass: {
-                            optional: true,
-                            type: 'boolean'
-                        },
-                        adm: {
-                            optional: true,
-                            type: 'string',
-                            minLength: 1
-                        }
-                    }
-                }
-            }, receivedParcels);
-
-            if (!results.valid) {
-                throw Whoopsie('INVALID_ARGUMENT', results.format());
-            }
-            //? }
-
-            EventsService.emit('hs_session_end', {
-                sessionId: sessionId
-            });
-
-            var returnDemand = {};
-
-            for (var k = 0; k < receivedParcels.length; k++) {
-
-                if (receivedParcels[k].pass) {
-                    continue;
-                }
-
-                if (!Utilities.isObject(receivedParcels[k].targeting) || Utilities.isEmpty(receivedParcels[k].targeting)) {
-                    continue;
-                }
-
-                if (!receivedParcels[k].targetingType === 'slot') {
-                    continue;
-                }
-
-                var demandObj = {
-                    targeting: receivedParcels[k].targeting,
-                    price: receivedParcels[k].price ? receivedParcels[k].price : 0,
-                    size: receivedParcels[k].size ? receivedParcels[k].size : [],
-                    partnerId: receivedParcels[k].partnerId ? receivedParcels[k].partnerId : '',
-                    adm: receivedParcels[k].adm ? receivedParcels[k].adm : ''
-                };
-
-                if (receivedParcels[k].hasOwnProperty('dealId')) {
-                    demandObj.dealId = receivedParcels[k].dealId;
-                }
-
-                var htSlotName = receivedParcels[k].htSlot.getName();
-                if (!returnDemand.hasOwnProperty(htSlotName)) {
-                    returnDemand[htSlotName] = [];
-                }
-
-                returnDemand[htSlotName].push(demandObj);
-            }
-
-            return returnDemand;
-        });
-
-        return {
-            promise: retPromise,
-            sessionId: sessionId
-        };
-    }
-
     (function __constructor() {
         EventsService = SpaceCamp.services.EventsService;
         TimerService = SpaceCamp.services.TimerService;
@@ -516,8 +268,6 @@ function DirectBiddingLayer(configs) {
 
         __desktopGlobalTimeout = configs.desktopGlobalTimeout;
         __mobileGlobalTimeout = configs.mobileGlobalTimeout;
-        __desktopVideoGlobalTimeout = configs.desktopVideoGlobalTimeout;
-        __mobileVideoGlobalTimeout = configs.mobileVideoGlobalTimeout;
 
         if (SpaceCamp.DeviceTypeChecker.getDeviceType() === 'mobile') {
             SpaceCamp.globalTimeout = __mobileGlobalTimeout;
@@ -526,8 +276,7 @@ function DirectBiddingLayer(configs) {
         }
 
         baseClass._setDirectInterface('DirectBiddingLayer', {
-            retrieveDemand: retrieveDemand,
-            retrieveVideoDemand: retrieveVideoDemand
+            retrieveDemand: retrieveDemand
         });
     })();
 
@@ -542,8 +291,7 @@ function DirectBiddingLayer(configs) {
         //? }
 
         //? if (TEST) {
-        retrieveDemand: retrieveDemand,
-        retrieveVideoDemand: retrieveVideoDemand
+        retrieveDemand: retrieveDemand
         //? }
     };
 

@@ -3,10 +3,18 @@
 var Prms = require('prms.js');
 
 function ComplianceServiceStub() {
+
     function getGdprConsent() {
         return {
             applies: true,
             consentString: ''
+        };
+    }
+
+    function getCcpaConsent() {
+        return {
+            version: 1,
+            uspString: ''
         };
     }
 
@@ -36,6 +44,11 @@ function ComplianceServiceStub() {
 
             getConsent: getGdprConsent,
             setApplies: function () {}
+        },
+
+        usp: {
+
+            getConsent: getCcpaConsent
         },
 
         isPrivacyEnabled: isPrivacyEnabled,

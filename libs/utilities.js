@@ -73,27 +73,27 @@ function Utilities() {
     function isArray(entity, type, className) {
         if (getType(entity) !== 'array') {
             return false;
-        } else {
-            if (typeof type !== 'undefined') {
-                if (!isString(type)) {
-                    throw Whoopsie('INVALID_TYPE', '`type` must be a string');
+        }
+
+        if (typeof type !== 'undefined') {
+            if (!isString(type)) {
+                throw Whoopsie('INVALID_TYPE', '`type` must be a string');
+            }
+
+            if (type === 'class') {
+                if (!isString(className)) {
+                    throw Whoopsie('INVALID_TYPE', '`className` must be a string');
                 }
 
-                if (type === 'class') {
-                    if (!isString(className)) {
-                        throw Whoopsie('INVALID_TYPE', '`className` must be a string');
+                for (var i = 0; i < entity.length; i++) {
+                    if (typeof entity[i] !== 'object' || entity[i].__type__ !== className) {
+                        return false;
                     }
-
-                    for (var i = 0; i < entity.length; i++) {
-                        if (typeof entity[i] !== 'object' || entity[i].__type__ !== className) {
-                            return false;
-                        }
-                    }
-                } else {
-                    for (var j = 0; j < entity.length; j++) {
-                        if (getType(entity[j]) !== type) {
-                            return false;
-                        }
+                }
+            } else {
+                for (var j = 0; j < entity.length; j++) {
+                    if (getType(entity[j]) !== type) {
+                        return false;
                     }
                 }
             }

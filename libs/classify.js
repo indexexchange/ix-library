@@ -7,6 +7,7 @@ var Inspector = require('schema-inspector.js');
 //? }
 
 function Classify() {
+
     function __removeProtectedMembers(theClass) {
         //? if (DEBUG) {
         var results = Inspector.validate({

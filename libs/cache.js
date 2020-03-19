@@ -11,6 +11,7 @@ var Whoopsie = require('whoopsie.js');
 //? }
 
 function Cache() {
+
     var __keyPrefix = 'IXWRAPPER';
 
     var __maxTTL = 604800000;
@@ -50,7 +51,7 @@ function Cache() {
         return true;
     }
 
-    function getData(key) {
+    function getEntry(key) {
         //? if (DEBUG) {
         var results = Inspector.validate({
             type: 'string',
@@ -100,7 +101,17 @@ function Cache() {
             return null;
         }
 
-        return entry.d;
+        return {
+            data: entry.d,
+            created: entry.t,
+            expires: entry.e
+        };
+    }
+
+    function getData(key) {
+        var entry = getEntry(key);
+
+        return entry && entry.data;
     }
 
     function setData(key, data, ttl) {
@@ -170,6 +181,7 @@ function Cache() {
     //? }
 
     (function __constructor() {
+
         __localStorageAvailable = Browser.isLocalStorageSupported();
     })();
 
@@ -186,6 +198,7 @@ function Cache() {
         //? }
 
         deleteData: deleteData,
+        getEntry: getEntry,
         getData: getData,
         setData: setData
     };

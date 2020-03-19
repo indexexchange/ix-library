@@ -8,6 +8,7 @@ var Inspector = require('schema-inspector.js');
 //? }
 
 function Layer() {
+
     var __directInterface;
 
     var __executor;
@@ -74,7 +75,6 @@ function Layer() {
 
             return receivedParcels;
         });
-
         //? } else {
         return __next(sessionId, outParcels);
         //? }

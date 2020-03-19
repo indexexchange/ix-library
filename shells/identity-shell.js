@@ -18,6 +18,7 @@ var Scribe = require('scribe.js');
 //? }
 
 function IdentityShell() {
+
     var __configs;
 
     var __rtiPartnerRequestComplete = {
@@ -117,6 +118,7 @@ function IdentityShell() {
 
     (function __constructor() {
         try {
+
             /*?
             write('__configs = ');
             if(__CONFIG_WINDOW_GLOBAL__) {

@@ -315,7 +315,21 @@ var ConfigValidators = {
                 mobileGlobalTimeout: {
                     type: 'integer',
                     gte: 0
-                },
+                }
+            }
+        }, configs);
+
+        if (!results.valid) {
+            return results.format();
+        }
+
+        return null;
+    },
+    VideoInterfaceLayer: function (configs) {
+        var results = Inspector.validate({
+            type: 'object',
+            strict: true,
+            properties: {
                 desktopVideoGlobalTimeout: {
                     type: 'integer',
                     gte: 0
@@ -473,8 +487,7 @@ var ConfigValidators = {
                 },
                 type: {
                     type: 'string',
-                    eq: ['INSTREAM_VIDEO', 'BANNER'],
-                    optional: true
+                    eq: ['INSTREAM_VIDEO', 'BANNER']
                 }
             }
         }, configs);
@@ -494,25 +507,25 @@ var ConfigValidators = {
 
         if (!configs.hasOwnProperty('sizeMapping')) {
             return '`config` must have property "sizeMapping"';
-        } else {
-            var indexRegex = /^(\d+)x(\d+)$/;
-            var keysCount = 0;
+        }
 
-            for (var index in configs.sizeMapping) {
-                if (!configs.sizeMapping.hasOwnProperty(index)) {
-                    continue;
-                }
+        var indexRegex = /^(\d+)x(\d+)$/;
+        var keysCount = 0;
 
-                if (indexRegex.test(index) === false) {
-                    return 'Keys of `config.sizeMapping` must be of form `widthxheight`';
-                }
-
-                keysCount++;
+        for (var index in configs.sizeMapping) {
+            if (!configs.sizeMapping.hasOwnProperty(index)) {
+                continue;
             }
 
-            if (keysCount === 0) {
-                return '`config.sizeMapping` must not be empty';
+            if (indexRegex.test(index) === false) {
+                return 'Keys of `config.sizeMapping` must be of form `widthxheight`';
             }
+
+            keysCount++;
+        }
+
+        if (keysCount === 0) {
+            return '`config.sizeMapping` must not be empty';
         }
 
         return null;
@@ -777,6 +790,23 @@ var ConfigValidators = {
                             minLength: 1
                         }
                     }
+                },
+                consent: {
+                    type: 'object',
+                    optional: true,
+                    strict: true,
+                    properties: {
+                        gdpr: {
+                            type: 'string',
+                            minLength: 1,
+                            optional: true
+                        }
+                    },
+                    exec: function (scheme, post) {
+                        if (post && !Object.keys(post)) {
+                            this.report('must declare at least one consent type');
+                        }
+                    }
                 }
             }
         }, profile);
@@ -886,9 +916,9 @@ var ConfigValidators = {
                             return;
                         }
 
-                        var result = ConfigValidators.bidTransformerConfig(post);
-                        if (result !== null) {
-                            this.report(result);
+                        var transformerResults = ConfigValidators.bidTransformerConfig(post);
+                        if (transformerResults !== null) {
+                            this.report(transformerResults);
                         }
                     }
                 }

@@ -12,6 +12,7 @@ var Scribe = require('scribe.js');
 //? }
 
 function HtSlotMapper(config) {
+
     var __selectors = [];
 
     var __filters = [];
@@ -257,6 +258,7 @@ function HtSlotMapper(config) {
             }
 
             if (hasEmptyTargeting || targetingMatchScore > 0) {
+
                 return targetingMatchScore + 1;
             }
 
@@ -545,6 +547,7 @@ function HtSlotMapper(config) {
         //? }
 
         if (Utilities.isEmpty(__filters)) {
+
             return htSlots.slice();
         }
 

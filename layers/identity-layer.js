@@ -8,7 +8,7 @@ var Utilities = require('utilities.js');
 var IdentityPartnerFactory = require('identity-partner-factory');
 
 var IdentityPartnerConstructors = {
-    /* PubKitTemplate<IdentityPartnerConstructors> */
+
 };
 
 //? if (DEBUG) {
@@ -17,7 +17,7 @@ var Scribe = require('scribe.js');
 var Whoopsie = require('whoopsie.js');
 
 var IdentityPartnerValidators = {
-    /* PubKitTemplate<IdentityPartnerValidators> */
+
 };
 //? }
 
@@ -81,7 +81,7 @@ function IdentityLayer(configs) {
         });
     }
 
-    function __invokeAllPartners() {
+    function invokeAllPartners() {
         var partnerPromises = [];
         var invocationDefer = Prms.defer();
 
@@ -187,7 +187,7 @@ function IdentityLayer(configs) {
             return;
         }
 
-        __retrievalDefer = __invokeAllPartners();
+        __retrievalDefer = invokeAllPartners();
 
         __status = __EnumStatuses.IN_PROGRESS;
 
@@ -347,14 +347,16 @@ function IdentityLayer(configs) {
         __baseClass._setDirectInterface('IdentityLayer', {
             retrieve: retrieve,
             getResult: getResult,
-            getIdentityResults: getIdentityResults
+            getIdentityResults: getIdentityResults,
+            invokeAllPartners: invokeAllPartners
         });
 
         __baseClass._setExecutor(__executor);
         //? } else {
         __baseClass._setDirectInterface('IdentityLayer', {
             retrieve: retrieve,
-            getAllPartnerResults: __getAllPartnerResults
+            getAllPartnerResults: __getAllPartnerResults,
+            invokeAllPartners: invokeAllPartners
         });
         //? }
     })();
@@ -381,7 +383,7 @@ function IdentityLayer(configs) {
 
         __sendStatsTimeouts: __sendStatsTimeouts,
         __getAllPartnerResults: __getAllPartnerResults,
-        __invokeAllPartners: __invokeAllPartners,
+        invokeAllPartners: invokeAllPartners,
         __partnerCaller: __partnerCaller
         //? }
     });

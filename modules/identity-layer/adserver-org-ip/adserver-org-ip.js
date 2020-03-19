@@ -2,7 +2,7 @@
 
 var API;
 
-var BASE_URL = '//match.adsrvr.org/track/rid';
+var BASE_URL = '//match.adsrvr.org/track/rid',
 var TTD_PID = 'casale';
 var FORMAT = 'json';
 

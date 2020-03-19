@@ -15,6 +15,7 @@ var Scribe = require('scribe.js');
 //? }
 
 function RenderService(configs) {
+
     //? if (DEBUG){
     var __adEntryFormat = {
         type: 'object',
@@ -568,6 +569,7 @@ function RenderService(configs) {
         var adIdsArray = null;
 
         if (price !== undefined) {
+
             var adIdsMaps = [__dealIdAdIdMap, __priceAdIdMap];
             for (var i = 0; i < adIdsMaps.length; i++) {
                 adIdsArray = __findAdIdsFromMap(adIdsMaps[i], partnerId, price, requestIds);
