@@ -21,7 +21,7 @@ var SpaceCamp = {
 
     instanceId: null,
 
-    version: '2.31.0'
+    version: '2.34.0'
 };
 
 module.exports = SpaceCamp;

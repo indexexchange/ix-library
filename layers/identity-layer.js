@@ -8,7 +8,7 @@ var Utilities = require('utilities.js');
 var IdentityPartnerFactory = require('identity-partner-factory');
 
 var IdentityPartnerConstructors = {
-
+    /* PubKitTemplate<IdentityPartnerConstructors> */
 };
 
 //? if (DEBUG) {
@@ -17,7 +17,7 @@ var Scribe = require('scribe.js');
 var Whoopsie = require('whoopsie.js');
 
 var IdentityPartnerValidators = {
-
+    /* PubKitTemplate<IdentityPartnerValidators> */
 };
 //? }
 
