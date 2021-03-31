@@ -9,6 +9,10 @@ var partnerValidator = function (configs) {
             pubid: {
                 type: 'string',
                 minLength: 1
+            },
+            enable4CiteTag: {
+                type: 'number',
+                eq: [0, 1]
             }
         }
     }, configs);
@@ -19,5 +23,6 @@ var partnerValidator = function (configs) {
 
     return null;
 };
+
 
 module.exports = partnerValidator;

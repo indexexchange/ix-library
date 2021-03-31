@@ -8,7 +8,7 @@ var TRADE_DESK_ID = '44489';
 
 var FPC_KEY = '_li_duid';
 
-var BASE_URL = '
+var BASE_URL = '//idx.liadm.com/idex/ie/any';
 
 var profile = {
     partnerId: 'LiveIntentIp',
@@ -19,7 +19,9 @@ var profile = {
 
         match: 259200000,
 
+
         pass: 86400000,
+
 
         error: 86400000
     },

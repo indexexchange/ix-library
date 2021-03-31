@@ -121,6 +121,11 @@ function Tcf2(configs) {
                 type: 'number',
                 default: 2,
                 properties: ['tcfPolicyVersion']
+            },
+            addtlConsent: {
+                type: 'string',
+                default: '',
+                properties: ['addtlConsent']
             }
         };
 

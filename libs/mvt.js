@@ -253,7 +253,7 @@ function MvtBuilder() {
         __targetingSubGroups = ['price', 'deal'];
 
         __baseUrls = {
-            dfp: 'https://securepubads.g.doubleclick.net/gampad/ads'
+             dfp: 'https://securepubads.g.doubleclick.net/gampad/ads'
         };
     })();
 

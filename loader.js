@@ -78,7 +78,7 @@ var ServiceConstructors = [
     {
         name: 'KeyValueService',
         constructor: require('key-value-service.js')
-    }
+    },
     //? }
 ];
 
@@ -153,7 +153,8 @@ function Loader(configs) {
         for (var k = 0; k < ServiceConstructors.length; k++) {
             validServices.push(ServiceConstructors[k].name);
         }
-        var results = ConfigValidators.ModuleLoader(configs, validServices, Object.keys(LayerConstructors));
+
+        var results = ConfigValidators.ModuleLoader(configs, validServices, Object.keys(LayerConstructors), SpaceCamp.PRODUCT);
 
         if (results) {
             throw Whoopsie('INVALID_CONFIG', results);
@@ -161,7 +162,6 @@ function Loader(configs) {
         //? }
 
         SpaceCamp.DeviceTypeChecker = DeviceTypeChecker(configs.DeviceTypeChecker);
-
         //? if (DEBUG) {
         Scribe.info('DeviceTypeChecker loaded.');
         //? }

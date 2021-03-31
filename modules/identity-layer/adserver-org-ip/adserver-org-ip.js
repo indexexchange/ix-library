@@ -1,8 +1,7 @@
 'use strict';
 
 var API;
-
-var BASE_URL = '//match.adsrvr.org/track/rid',
+var BASE_URL = '//match.adsrvr.org/track/rid';
 var TTD_PID = 'casale';
 var FORMAT = 'json';
 
@@ -12,11 +11,8 @@ var profile = {
     version: '1.3.0',
     source: 'adserver.org',
     cacheExpiry: {
-
         match: 604800000,
-
         pass: 86400000,
-
         error: 86400000
     },
     targetingKeys: {
@@ -30,6 +26,19 @@ function retrieve() {
         fmt: FORMAT,
         p: API.configs.publisherId
     };
+
+    var consent = API.Utilities.getConsent('gdpr');
+    if (consent) {
+        if ( consent.applies == true ) {
+            reqData["gdpr"] = 1;
+    } else if ( consent.applies == false ) {
+            reqData["gdpr"] = 0;
+        }
+
+        if ( consent.consentString ) {
+            reqData["gdpr_consent"] = consent.consentString;
+        }
+    }
 
     API.Utilities.ajax({
         url: API.Utilities.getProtocol() + BASE_URL,

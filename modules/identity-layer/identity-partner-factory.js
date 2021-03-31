@@ -139,21 +139,24 @@ function IdentityPartnerFactory(partnerModule, validatedConfigs) {
         }
         //? }
 
-        var cacheData = {
-            response: type,
-            version: __partnerProfile.version
-        };
+        if (__partnerProfile.cacheExpiry) {
 
-        if (type !== 'pass') {
-            cacheData.data = data;
+            var cacheData = {
+                response: type,
+                version: __partnerProfile.version
+            };
+
+            if (type !== 'pass') {
+                cacheData.data = data;
+            }
+
+            if (Object.keys(__consentProvided).length) {
+                cacheData.consent = __consentProvided;
+            }
+
+            var expiry = __partnerProfile.cacheExpiry[type];
+            LocalCache.setData(__storageKey, cacheData, expiry);
         }
-
-        if (Object.keys(__consentProvided).length) {
-            cacheData.consent = __consentProvided;
-        }
-
-        var expiry = __partnerProfile.cacheExpiry[type];
-        LocalCache.setData(__storageKey, cacheData, expiry);
 
         __registerRetrieval(type, data);
 
@@ -501,10 +504,11 @@ function IdentityPartnerFactory(partnerModule, validatedConfigs) {
                 isObject: Utilities.isObject,
                 isTopFrame: Browser.isTopFrame,
                 isXhrSupported: Network.isXhrSupported,
+                readCookie: Browser.readCookie,
 
                 ajax: __apiUtilityGuardedAjax,
                 getConsent: __apiUtilityGetConsent,
-                getIdentityResultFrom: __apiUtilityGetIdentityResultFrom
+                getIdentityResultFrom: __apiUtilityGetIdentityResultFrom,
             },
 
             onRetrieve: EventsService.on.bind(null, 'ip_module_retrieve_' + __partnerId),

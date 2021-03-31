@@ -18,7 +18,7 @@ function GptMapSlots(configs, state) {
 
     var __htSlotMapper;
 
-    function mapHtSlots(gSlotDemandObjs) {
+    function mapHtSlots(gSlotDemandObjs, pbjAdUnits) {
         //? if (DEBUG){
         var results = Inspector.validate({
             type: 'array',
@@ -90,9 +90,10 @@ function GptMapSlots(configs, state) {
             adSlotInfoObjs.push(adSlotInfo);
         }
 
+        var selectedSlotParcels;
         var allHtSlots = SpaceCamp.htSlots;
         var filteredHtSlots = __htSlotMapper.filter(allHtSlots, adSlotInfoObjs);
-        var selectedSlotParcels = __htSlotMapper.select(filteredHtSlots, adSlotInfoObjs);
+        selectedSlotParcels = __htSlotMapper.select(filteredHtSlots, adSlotInfoObjs);
 
         //? if (DEBUG) {
         Scribe.info(selectedSlotParcels.length + ' HT slot mappings');

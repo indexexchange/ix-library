@@ -343,6 +343,28 @@ function OpenRtb() {
         this.__bidRequest.user.ext.consent = gdprConsentString || '';
     };
 
+    BidRequest.prototype.setGdprAddtlConsent = function (addtlConsent) {
+        //? if (DEBUG) {
+        var result = Inspector.validate({
+            type: 'string',
+            strict: true
+        }, addtlConsent);
+
+        if (!result.valid) {
+            throw Whoopsie('INVALID_ARGUMENT', result.format());
+        }
+        //? }
+
+        if (addtlConsent !== '' && typeof addtlConsent !== 'undefined') {
+
+            this.__bidRequest.user.ext.consented_providers_settings
+                = this.__bidRequest.user.ext.consented_providers_settings || {};
+
+            this.__bidRequest.user.ext.consented_providers_settings.consented_providers
+                = addtlConsent || '';
+        }
+    };
+
     BidRequest.prototype.setUspConsent = function (uspConsent) {
         //? if (DEBUG) {
         var result = Inspector.validate({

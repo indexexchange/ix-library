@@ -151,7 +151,7 @@ function HtSlotMapper(config) {
                         properties: {
                             __type__: {
                                 type: 'string',
-                                eq: 'HeaderTagSlot'
+                                eq: ['HeaderTagSlot']
                             }
                         }
                     }
@@ -205,7 +205,7 @@ function HtSlotMapper(config) {
                         properties: {
                             __type__: {
                                 type: 'string',
-                                eq: 'HeaderTagSlot'
+                                eq: ['HeaderTagSlot']
                             }
                         }
                     }
@@ -292,7 +292,7 @@ function HtSlotMapper(config) {
                         properties: {
                             __type__: {
                                 type: 'string',
-                                eq: 'HeaderTagSlot'
+                                eq: ['HeaderTagSlot']
                             }
                         }
                     }
@@ -353,7 +353,7 @@ function HtSlotMapper(config) {
                         properties: {
                             __type__: {
                                 type: 'string',
-                                eq: 'HeaderTagSlot'
+                                eq: ['HeaderTagSlot']
                             }
                         }
                     }
@@ -400,7 +400,7 @@ function HtSlotMapper(config) {
                         properties: {
                             __type__: {
                                 type: 'string',
-                                eq: 'HeaderTagSlot'
+                                eq: ['HeaderTagSlot']
                             }
                         }
                     }
@@ -442,7 +442,7 @@ function HtSlotMapper(config) {
                     properties: {
                         __type__: {
                             type: 'string',
-                            eq: 'HeaderTagSlot'
+                            eq: ['HeaderTagSlot']
                         }
                     }
                 }
@@ -479,7 +479,7 @@ function HtSlotMapper(config) {
                     properties: {
                         __type__: {
                             type: 'string',
-                            eq: 'HeaderTagSlot'
+                            eq: ['HeaderTagSlot']
                         }
                     }
                 },
@@ -530,7 +530,7 @@ function HtSlotMapper(config) {
                         properties: {
                             __type__: {
                                 type: 'string',
-                                eq: 'HeaderTagSlot'
+                                eq: ['HeaderTagSlot']
                             }
                         }
                     }
@@ -566,7 +566,7 @@ function HtSlotMapper(config) {
         return filteredSlots;
     }
 
-    function select(htSlots, adSlots) {
+    function select(libSlots, adSlots) {
         //? if (DEBUG) {
         var results = Inspector.validate({
             type: 'object',
@@ -583,14 +583,14 @@ function HtSlotMapper(config) {
                         }
                     }
                 },
-                htSlots: {
+                libSlots: {
                     type: 'array',
                     items: {
                         type: 'object',
                         properties: {
                             __type__: {
                                 type: 'string',
-                                eq: 'HeaderTagSlot'
+                                eq: ['HeaderTagSlot']
                             }
                         }
                     }
@@ -598,7 +598,7 @@ function HtSlotMapper(config) {
             }
         }, {
             adSlots: adSlots,
-            htSlots: htSlots
+            libSlots: libSlots
         });
 
         if (!results.valid) {
@@ -606,43 +606,43 @@ function HtSlotMapper(config) {
         }
         //? }
 
-        if (Utilities.isEmpty(htSlots) || Utilities.isEmpty(adSlots)) {
+        if (Utilities.isEmpty(libSlots) || Utilities.isEmpty(adSlots)) {
             return [];
         }
 
         var selectedParcels = [];
-        var htSlotsCopy = htSlots.slice();
+        var libSlotsCopy = libSlots.slice();
         var adSlotsCopy = adSlots.slice();
 
         for (var k = 0; k < __selectors.length; k++) {
             var selectorSet = __selectors[k];
-            var htSlotsMatched = [];
+            var libSlotsMatched = [];
 
             for (var l = adSlotsCopy.length - 1; l >= 0; l--) {
                 var bestMatch = [];
                 var bestMatchSlot = -1;
 
-                for (var m = 0; m < htSlotsCopy.length; m++) {
-                    if (!__doAllSelectorsMatch(adSlotsCopy[l], htSlotsCopy[m], selectorSet)) {
+                for (var m = 0; m < libSlotsCopy.length; m++) {
+                    if (!__doAllSelectorsMatch(adSlotsCopy[l], libSlotsCopy[m], selectorSet)) {
                         continue;
                     }
 
-                    var curHtSlotScores = [];
+                    var curlibSlotScores = [];
 
                     for (var n = 0; n < selectorSet.length; n++) {
-                        var score = selectorSet[n](adSlotsCopy[l], htSlotsCopy[m]);
-                        curHtSlotScores.push(score);
+                        var score = selectorSet[n](adSlotsCopy[l], libSlotsCopy[m]);
+                        curlibSlotScores.push(score);
                     }
 
                     for (var o = 0; o < selectorSet.length; o++) {
-                        if (!bestMatch[o] || (curHtSlotScores[o] > bestMatch[o])) {
-                            bestMatch = curHtSlotScores;
+                        if (!bestMatch[o] || (curlibSlotScores[o] > bestMatch[o])) {
+                            bestMatch = curlibSlotScores;
                             bestMatchSlot = m;
 
                             break;
                         }
 
-                        if (curHtSlotScores[o] < bestMatch[o]) {
+                        if (curlibSlotScores[o] < bestMatch[o]) {
                             break;
                         }
                     }
@@ -650,15 +650,19 @@ function HtSlotMapper(config) {
 
                 if (bestMatchSlot >= 0) {
                     //? if (DEBUG) {
-                    Scribe.info('htSlot "' + htSlotsCopy[bestMatchSlot].getName() + '" mapped to adSlot "' + adSlotsCopy[l].divId + '"');
+                    Scribe.info('htSlot "' + libSlotsCopy[bestMatchSlot].getName() + '" mapped to adSlot "' + adSlotsCopy[l].divId + '"');
                     //? }
 
                     var matchParcel = {};
-                    htSlotsMatched[bestMatchSlot] = true;
-                    matchParcel.htSlot = htSlotsCopy[bestMatchSlot];
+                    libSlotsMatched[bestMatchSlot] = true;
+
+                    matchParcel.htSlot = libSlotsCopy[bestMatchSlot];
+
                     if (adSlotsCopy[l].firstPartyData) {
                         matchParcel.firstPartyData = adSlotsCopy[l].firstPartyData;
                     }
+
+                    matchParcel = libSlotsCopy[bestMatchSlot];
 
                     if (adSlotsCopy[l].reference) {
                         matchParcel.ref = adSlotsCopy[l].reference;
@@ -668,9 +672,9 @@ function HtSlotMapper(config) {
                 }
             }
 
-            for (var p = htSlotsCopy.length - 1; p >= 0; p--) {
-                if (htSlotsMatched[p]) {
-                    htSlotsCopy.splice(p, 1);
+            for (var p = libSlotsCopy.length - 1; p >= 0; p--) {
+                if (libSlotsMatched[p]) {
+                    libSlotsCopy.splice(p, 1);
                 }
             }
         }
@@ -680,7 +684,7 @@ function HtSlotMapper(config) {
 
     (function __constructor() {
         //? if (DEBUG) {
-        var results = ConfigValidators.HtSlotMapper(config, Object.keys(__matcherFunctions));
+        var results;
 
         if (results) {
             throw Whoopsie('INVALID_CONFIG', results);

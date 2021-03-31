@@ -371,7 +371,7 @@ var ConfigValidators = {
     StorageLayer: function () {
         return null;
     },
-    ModuleLoader: function (configs, serviceNames, layerNames) {
+    ModuleLoader: function (configs, serviceNames, layerNames, productName) {
         var result = Inspector.validate({
             type: 'object',
             properties: {
@@ -389,7 +389,6 @@ var ConfigValidators = {
                 },
                 Layers: {
                     type: 'array',
-                    minLength: 1,
                     items: {
                         type: 'object',
                         properties: {
@@ -765,6 +764,7 @@ var ConfigValidators = {
                 },
                 cacheExpiry: {
                     type: 'object',
+                    optional: true,
                     strict: true,
                     properties: {
                         match: {
@@ -822,6 +822,13 @@ var ConfigValidators = {
             type: 'object',
             strict: true,
             properties: {
+                //? if (TEST) {
+                test: {
+                    type: 'object',
+                    strict: false,
+                    optional: true
+                },
+                //? }
                 type: {
                     type: 'string',
                     eq: 'identity'

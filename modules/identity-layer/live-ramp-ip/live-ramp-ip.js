@@ -1,13 +1,16 @@
-'use strict';
+use strict';
+
+//? if (DEBUG) {
+var Scribe = require('scribe.js');
+//? }
 
 var API;
 
-var BASE_URL = '//api.rlcdn.com/api/identity',
+var BASE_URL = '//api.rlcdn.com/api/identity';
 
 var PARTNER_ID = 2;
 
 var CONSENT_TCF_KEY = 'ct';
-var CONSENT_TCF_VERSION = 1;
 
 var profile = {
     partnerId: 'LiveRampIp',
@@ -18,7 +21,9 @@ var profile = {
 
         match: 86400000,
 
+
         pass: 86400000,
+
 
         error: 86400000
     },
@@ -36,12 +41,19 @@ function retrieve() {
         rt: 'envelope'
     };
 
+
     var consent = API.Utilities.getConsent('gdpr');
-    if (consent && consent.consentString) {
+    if (consent && consent.consentString && consent.version) {
         reqData[profile.consent.gdpr] = consent.consentString;
 
-        reqData[CONSENT_TCF_KEY] = CONSENT_TCF_VERSION;
+
+        if ( consent.version == 1 ) {
+            reqData[CONSENT_TCF_KEY] = 1;
+        } else if ( consent.version == 2 ) {
+            reqData[CONSENT_TCF_KEY] = 4;
+        }
     }
+
 
     var entrypoints = [];
 
@@ -107,6 +119,33 @@ function retrieve() {
 
 function main(apiObject) {
     API = apiObject;
+
+    if (window.ats) {
+        window.ats.retrieveEnvelope(function (rsp) {
+            if (rsp) {
+
+                try {
+                    var envelope = JSON.parse(rsp).envelope;
+                    API.registerMatch({
+                        source: profile.source,
+                        uids: [
+                            {
+                                id: envelope,
+                                ext: {
+                                    rtiPartner: 'idl'
+                                }
+                            }
+                        ]
+                    });
+                } catch (error) {
+                    //? if (DEBUG) {
+                    Scribe.error('invalid envelope object: ' + error);
+                    //? }
+                }
+            }
+        });
+    }
+
     API.onRetrieve(retrieve);
 }
 
